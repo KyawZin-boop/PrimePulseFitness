@@ -1,10 +1,13 @@
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import Hero from "@/components/Hero";
+import Navigation from "@/components/Navigation";
+import Products from "@/components/Products";
 
 const HomeView = () => {
   return (
-    <div className="w-full h-full flex items-center justify-center">
-      <Button onClick={() => toast.success("Success")}>Toast</Button>
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <Hero />
+      <Products />
     </div>
   );
 };

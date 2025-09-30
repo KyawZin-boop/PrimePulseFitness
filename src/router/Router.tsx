@@ -1,4 +1,6 @@
+import AuthLayout from "@/layouts/AuthLayout";
 import DefaultLayout from "@/layouts/DefaultLayout";
+import LoginView from "@/modules/auth/Login/LoginView";
 import HomeView from "@/modules/HomeView";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
@@ -12,6 +14,20 @@ const Router = () => {
           path: "",
           element: <HomeView />,
         },
+      ],
+    },
+    {
+      path: "/auth",
+      element: <AuthLayout />,
+      children: [
+        {
+          path: "login",
+          element: <LoginView />,
+        },
+        // {
+        //   path: "register",
+        //   element: <RegisterView />,
+        // },
       ],
     },
   ]);

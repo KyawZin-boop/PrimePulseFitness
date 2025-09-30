@@ -3,7 +3,7 @@ import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 
 export default function useAuth() {
-  const cookieToken = Cookies.get("demo-token") || null;
+  const cookieToken = Cookies.get("gym-token") || null;
 
   let initialToken: string | null = cookieToken;
   let initialCredentials: UserCredentials | null = null;
@@ -26,7 +26,7 @@ export default function useAuth() {
       };
       initialAuthenticated = true;
     } catch {
-      Cookies.remove("demo-token");
+      Cookies.remove("gym-token");
       initialToken = null;
     }
   }
@@ -62,7 +62,7 @@ export default function useAuth() {
 
       setIsAuthenticated(true);
     } catch {
-      Cookies.remove("demo-token");
+      Cookies.remove("gym-token");
       setToken(null);
       setUserCredentials(null);
       setIsAuthenticated(false);
@@ -71,13 +71,13 @@ export default function useAuth() {
 
   const userLogin = (newToken: string) => {
     if (newToken !== token) {
-      Cookies.set("demo-token", newToken);
+      Cookies.set("gym-token", newToken);
       setToken(newToken);
     }
   };
 
   const userLogout = () => {
-    Cookies.remove("demo-token");
+    Cookies.remove("gym-token");
     setToken(null);
     setIsAuthenticated(false);
     setUserCredentials(null);
