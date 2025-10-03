@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ShoppingBag, User } from "lucide-react";
+import useAuth from "@/hooks/useAuth";
+import { NavLink } from "react-router-dom";
+import LogoutDialog from "./dialogs/LogoutDialog";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { isAuthenticated, userCredentials } = useAuth();
 
   return (
     <header className="fixed top-0 w-full z-50 bg-background/95 backdrop-blur-sm border-b border-border shadow-card">
@@ -38,12 +42,25 @@ const Navigation = () => {
             <Button variant="ghost" size="icon">
               <ShoppingBag className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon">
-              <User className="h-5 w-5" />
-            </Button>
-            <Button variant="hero" size="lg">
-              Join Now
-            </Button>
+            
+            {!isAuthenticated ? (
+              <NavLink to={"/auth/login"}>
+                <Button variant="hero" size="lg">
+                  Join Now
+                </Button>
+              </NavLink>
+            ) : (
+              <>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                </Button>
+                <LogoutDialog>
+                  <Button variant="destructive" size="lg">
+                    Log Out
+                  </Button>
+                </LogoutDialog>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -83,9 +100,24 @@ const Navigation = () => {
                 <Button variant="ghost" size="icon">
                   <User className="h-5 w-5" />
                 </Button>
-                <Button variant="hero" size="lg" className="cursor-pointer">
-                  Join Now
-                </Button>
+                {!isAuthenticated ? (
+                  <NavLink to={"/auth/login"}>
+                    <Button variant="hero" size="lg">
+                      Join Now
+                    </Button>
+                  </NavLink>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="icon">
+                      <User className="h-5 w-5" />
+                    </Button>
+                    <LogoutDialog>
+                      <Button variant="destructive" size="lg">
+                        Log Out
+                      </Button>
+                    </LogoutDialog>
+                  </>
+                )}
               </div>
             </nav>
           </div>

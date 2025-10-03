@@ -1,48 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShoppingCart, Star } from "lucide-react";
-import equipmentImage from "@/assets/gym-equipment.jpg";
-import clothesImage from "@/assets/gym-clothes.jpg";
+import api from "@/api";
+import { useEffect } from "react";
 
 const Products = () => {
-  const products = [
-    {
-      id: 1,
-      name: "Premium Dumbbells Set",
-      category: "Equipment",
-      price: 299,
-      rating: 4.9,
-      image: equipmentImage,
-      description: "Professional-grade adjustable dumbbells for home and gym use"
-    },
-    {
-      id: 2,
-      name: "Athletic Workout Gear",
-      category: "Apparel",
-      price: 89,
-      rating: 4.8,
-      image: clothesImage,
-      description: "High-performance moisture-wicking athletic wear collection"
-    },
-    {
-      id: 3,
-      name: "Resistance Bands Pro",
-      category: "Equipment",
-      price: 49,
-      rating: 4.7,
-      image: equipmentImage,
-      description: "Complete resistance training system with multiple resistance levels"
-    },
-    {
-      id: 4,
-      name: "Performance Activewear",
-      category: "Apparel",
-      price: 129,
-      rating: 4.9,
-      image: clothesImage,
-      description: "Premium activewear designed for peak performance and comfort"
-    }
-  ];
+  const { data: products } = api.products.getAllProducts.useQuery();
 
   return (
     <section id="products" className="py-20 bg-secondary">
@@ -55,25 +18,25 @@ const Products = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {products.map((product) => (
-            <Card key={product.id} className="bg-gradient-card border-0 shadow-card hover:shadow-athletic transition-athletic group overflow-hidden">
+          {products && products.map((product) => (
+            <Card key={product.productID} className="bg-gradient-card border-0 shadow-card hover:shadow-athletic transition-athletic group overflow-hidden">
               <div className="relative overflow-hidden">
                 <img
-                  src={product.image}
+                  src={product.imageUrl}
                   alt={product.name}
                   className="w-full h-48 object-cover group-hover:scale-105 transition-athletic"
                 />
                 <div className="absolute top-4 left-4">
                   <span className="bg-accent text-accent-foreground text-xs font-bold px-2 py-1 rounded-full">
-                    {product.category}
+                    {product.categoryName}
                   </span>
                 </div>
               </div>
               
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 flex-1">
                 <div className="flex items-center justify-between mb-2">
                   <CardTitle className="text-lg font-bold">{product.name}</CardTitle>
-                  <div className="flex items-center gap-1">
+                  <div className="flex gap-1">
                     <Star className="h-4 w-4 fill-accent text-accent" />
                     <span className="text-sm font-medium">{product.rating}</span>
                   </div>
@@ -83,11 +46,11 @@ const Products = () => {
                 </CardDescription>
               </CardHeader>
               
-              <CardFooter className="flex items-center justify-between pt-0">
-                <div className="text-2xl font-black text-primary">
-                  ${product.price}
+              <CardFooter className="flex flex-col pt-0">
+                <div className="text-lg font-black text-primary text-left mb-2 w-full">
+                  <span className="text-accent text-md">Price - </span><span>{product.sellingPrice.toFixed(0)} Kyat</span>
                 </div>
-                <Button variant="athletic" size="sm" className="group">
+                <Button variant="athletic" size="sm" className="group w-full">
                   <ShoppingCart className="mr-2 h-4 w-4 group-hover:scale-110 transition-athletic" />
                   Add to Cart
                 </Button>

@@ -26,6 +26,7 @@ axios.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Redirect to login page if unauthorized
+      Cookies.remove('demo-token');
       window.location.href = "/auth/login";
     }
     return Promise.reject(error);

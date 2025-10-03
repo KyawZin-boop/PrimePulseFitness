@@ -1,7 +1,8 @@
 import AuthLayout from "@/layouts/AuthLayout";
 import DefaultLayout from "@/layouts/DefaultLayout";
-import LoginView from "@/modules/auth/Login/LoginView";
 import HomeView from "@/modules/HomeView";
+import ClassDetailView from "@/modules/classes/ClassDetailView";
+import LoginView from "@/modules/auth/Login/LoginView";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 const Router = () => {
@@ -13,6 +14,10 @@ const Router = () => {
         {
           path: "",
           element: <HomeView />,
+        },
+        {
+          path: "classes/:classId",
+          element: <ClassDetailView />,
         },
       ],
     },
