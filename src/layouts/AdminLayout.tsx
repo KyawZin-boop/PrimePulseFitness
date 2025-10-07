@@ -1,48 +1,152 @@
-import { CommandDialog } from "@/components/CommandDialog";
-import { Navbar } from "@/components/Navbar";
-import { Sidebar } from "@/components/Sidebar";
+import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  LayoutDashboard,
+  Users,
+  UserCog,
+  Calendar,
+  BookOpen,
+  ShoppingCart,
+  Package,
+  DollarSign,
+  CreditCard,
+  FileText,
+  Settings,
+  MessageSquare,
+  Bell,
+  Menu,
+  X,
+} from "lucide-react";
+import { useState } from "react";
 import useAuth from "@/hooks/useAuth";
-import { useThemeStore } from "@/lib/theme";
-import { cn } from "@/lib/utils";
-import { useEffect } from "react";
-import { Navigate, Outlet } from "react-router-dom";
 
 const AdminLayout = () => {
-  const { theme } = useThemeStore();
-  const { isAuthenticated, userCredentials } = useAuth();
+  const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { userCredentials } = useAuth();
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
-
-  if (isAuthenticated && !!userCredentials) {
-    if (
-      userCredentials.role === "user" ||
-      userCredentials.role === "designer"
-    ) {
+  if (!!userCredentials) {
+    if (userCredentials.role === "user") {
       return <Navigate to="/" replace />;
     }
-  } else {
-    return <Navigate to="/auth/login" replace />;
-  }
+    else if (userCredentials.role === "trainer") {
+      return <Navigate to="/trainer" replace />;
+    }
+  } 
+
+  const navigation = [
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Users", href: "/admin/users", icon: Users },
+    { name: "Trainers", href: "/admin/trainers", icon: UserCog },
+    { name: "Classes", href: "/admin/classes", icon: Calendar },
+    { name: "Bookings", href: "/admin/bookings", icon: BookOpen },
+    { name: "Products", href: "/admin/products", icon: Package },
+    { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
+    { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
+    { name: "Memberships", href: "/admin/memberships", icon: CreditCard },
+    { name: "Content", href: "/admin/content", icon: FileText },
+    { name: "Reports", href: "/admin/reports", icon: FileText },
+    { name: "Reviews", href: "/admin/reviews", icon: MessageSquare },
+    { name: "Notifications", href: "/admin/notifications", icon: Bell },
+    { name: "Settings", href: "/admin/settings", icon: Settings },
+  ];
+
+  const isActive = (path: string) => {
+    if (path === "/admin") {
+      return location.pathname === "/admin";
+    }
+    return location.pathname.startsWith(path);
+  };
+
   return (
-    <>
-      <div
-        className={cn(
-          "flex h-screen overflow-hidden",
-          theme === "dark" ? "bg-gray-900 text-white" : "bg-white text-black"
-        )}
-      >
-        <Sidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <Navbar />
-          <main className="flex-1 overflow-y-auto p-4">
-            <Outlet />
-          </main>
+    <div className="min-h-screen bg-background">
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b">
+        <div className="flex items-center justify-between p-4">
+          <h1 className="text-xl font-bold text-accent">Admin Panel</h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </Button>
         </div>
       </div>
-      <CommandDialog />
-    </>
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed top-0 left-0 z-40 h-screen w-64 bg-card border-r transition-transform ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0`}
+      >
+        <div className="flex h-full flex-col">
+          {/* Logo */}
+          <div className="hidden lg:flex h-16 items-center border-b px-6">
+            <h1 className="text-xl font-bold text-accent">Admin Panel</h1>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto p-4 mt-16 lg:mt-0">
+            <ul className="space-y-1">
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.name}>
+                    <Link
+                      to={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                        isActive(item.href)
+                          ? "bg-accent text-white"
+                          : "hover:bg-secondary"
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {item.name}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          {/* User Info */}
+          <div className="border-t p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center text-white font-semibold">
+                A
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">Admin User</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  admin@primepulse.com
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-background/80 backdrop-blur-sm lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Main Content */}
+      <main className="lg:pl-64 pt-16 lg:pt-0">
+        <div className="min-h-screen">
+          <Outlet />
+        </div>
+      </main>
+    </div>
   );
 };
 

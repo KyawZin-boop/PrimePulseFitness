@@ -1,44 +1,60 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { Menu, X, ShoppingBag, User } from "lucide-react";
 import useAuth from "@/hooks/useAuth";
-import { NavLink } from "react-router-dom";
-import LogoutDialog from "./dialogs/LogoutDialog";
+import { NavLink, useNavigate } from "react-router-dom";
+import { googleLogout } from "@react-oauth/google";
+import { userNavItems } from "@/constants";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { isAuthenticated, userCredentials } = useAuth();
+  const navigate = useNavigate();
+  const { isAuthenticated, userLogout } = useAuth();
+
+  const handleLogout = () => {
+    userLogout();
+    googleLogout();
+    navigate("/auth/login");
+  };
 
   return (
     <header className="fixed top-0 w-full z-50 bg-background/95 backdrop-blur-sm border-b border-border shadow-card">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="grid grid-cols-3 items-center h-16">
           {/* Logo */}
           <div className="text-heading font-black text-primary">
-            FITZONE
+            PRIME PULSE
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <a href="#home" className="text-foreground hover:text-accent transition-athletic font-medium">
-              Home
-            </a>
-            <a href="#products" className="text-foreground hover:text-accent transition-athletic font-medium">
-              Shop
-            </a>
-            <a href="#classes" className="text-foreground hover:text-accent transition-athletic font-medium">
-              Classes
-            </a>
-            <a href="#trainers" className="text-foreground hover:text-accent transition-athletic font-medium">
-              Trainers
-            </a>
-            <a href="#contact" className="text-foreground hover:text-accent transition-athletic font-medium">
-              Contact
-            </a>
+          <nav className="hidden md:flex items-center justify-center space-x-8">
+            {userNavItems.map((item) => (
+              <NavLink
+                key={item.label}
+                to={item.href}
+                end={item.href === "/"}
+                className={({ isActive }) =>
+                  `font-medium transition-athletic hover:text-accent ${
+                    isActive ? "text-accent" : "text-foreground"
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
           </nav>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4 justify-end">
             <Button variant="ghost" size="icon">
               <ShoppingBag className="h-5 w-5" />
             </Button>
@@ -51,14 +67,24 @@ const Navigation = () => {
               </NavLink>
             ) : (
               <>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
-                <LogoutDialog>
-                  <Button variant="destructive" size="lg">
-                    Log Out
-                  </Button>
-                </LogoutDialog>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <User size={18} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="" align="end">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem>Profile</DropdownMenuItem>
+                      <DropdownMenuItem>Settings</DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleLogout()}>
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
           </div>
@@ -78,44 +104,51 @@ const Navigation = () => {
         {isOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <nav className="flex flex-col space-y-4">
-              <a href="#home" className="text-foreground hover:text-accent transition-athletic font-medium">
-                Home
-              </a>
-              <a href="#products" className="text-foreground hover:text-accent transition-athletic font-medium">
-                Shop
-              </a>
-              <a href="#classes" className="text-foreground hover:text-accent transition-athletic font-medium">
-                Classes
-              </a>
-              <a href="#trainers" className="text-foreground hover:text-accent transition-athletic font-medium">
-                Trainers
-              </a>
-              <a href="#contact" className="text-foreground hover:text-accent transition-athletic font-medium">
-                Contact
-              </a>
+              {userNavItems.map((item) => (
+                <NavLink
+                  key={item.label}
+                  to={item.href}
+                  end={item.href === "/"}
+                  onClick={() => setIsOpen(false)}
+                  className={({ isActive }) =>
+                    `font-medium transition-athletic hover:text-accent ${
+                      isActive ? "text-accent" : "text-foreground"
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
               <div className="flex items-center space-x-4 pt-4">
                 <Button variant="ghost" size="icon">
                   <ShoppingBag className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
                 {!isAuthenticated ? (
-                  <NavLink to={"/auth/login"}>
+                  <NavLink to={"/auth/login"} onClick={() => setIsOpen(false)}>
                     <Button variant="hero" size="lg">
                       Join Now
                     </Button>
                   </NavLink>
                 ) : (
                   <>
-                    <Button variant="ghost" size="icon">
-                      <User className="h-5 w-5" />
-                    </Button>
-                    <LogoutDialog>
-                      <Button variant="destructive" size="lg">
-                        Log Out
-                      </Button>
-                    </LogoutDialog>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <User size={18} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="" align="end">
+                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem>Profile</DropdownMenuItem>
+                          <DropdownMenuItem>Settings</DropdownMenuItem>
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleLogout()}>
+                          Log out
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </>
                 )}
               </div>

@@ -1,60 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, Award, Clock, Users } from "lucide-react";
-import trainer1 from "@/assets/trainer-1.jpg";
-import trainer2 from "@/assets/trainer-2.jpg";
+import api from "@/api";
 
 const Trainers = () => {
-  const trainers = [
-    {
-      id: 1,
-      name: "Mike Johnson",
-      specialty: "Strength & HIIT Training",
-      experience: "8 years",
-      rating: 4.9,
-      clients: 250,
-      image: trainer1,
-      certifications: ["NASM-CPT", "HIIT Specialist"],
-      description: "Former competitive athlete specializing in high-intensity training and strength development",
-      specialties: ["Weight Loss", "Muscle Building", "Athletic Performance"]
-    },
-    {
-      id: 2,
-      name: "Sarah Chen",
-      specialty: "Functional Fitness & Nutrition",
-      experience: "6 years",
-      rating: 4.8,
-      clients: 180,
-      image: trainer2,
-      certifications: ["ACE-CPT", "Nutrition Coach"],
-      description: "Holistic approach combining functional movement patterns with personalized nutrition guidance",
-      specialties: ["Functional Training", "Nutrition Planning", "Injury Prevention"]
-    },
-    {
-      id: 3,
-      name: "Alex Thompson",
-      specialty: "Boxing & Cardio",
-      experience: "10 years",
-      rating: 4.9,
-      clients: 320,
-      image: trainer1,
-      certifications: ["Boxing Coach", "ACSM-CPT"],
-      description: "Professional boxing background bringing authentic technique and conditioning methods",
-      specialties: ["Boxing Technique", "Cardio Conditioning", "Mental Toughness"]
-    },
-    {
-      id: 4,
-      name: "Emma Rodriguez",
-      specialty: "Yoga & Mindfulness",
-      experience: "12 years",
-      rating: 4.9,
-      clients: 200,
-      image: trainer2,
-      certifications: ["RYT-500", "Meditation Teacher"],
-      description: "Integrating traditional yoga practice with modern fitness for complete mind-body wellness",
-      specialties: ["Flexibility", "Stress Relief", "Mind-Body Connection"]
-    }
-  ];
+  
+  const { data: trainers } = api.trainers.getPopularTrainers.useQuery();
 
   return (
     <section id="trainers" className="py-20 bg-secondary">
@@ -67,13 +18,13 @@ const Trainers = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {trainers.map((trainer) => (
-            <Card key={trainer.id} className="bg-gradient-card border-0 shadow-card hover:shadow-athletic transition-athletic group">
+          {trainers && trainers.map((trainer) => (
+            <Card key={trainer.trainerID} className="bg-gradient-card pt-0 border-0 shadow-card hover:shadow-athletic transition-athletic group">
               <div className="relative overflow-hidden">
                 <img
-                  src={trainer.image}
+                  src={trainer.imageUrl || ""}
                   alt={trainer.name}
-                  className="w-full h-64 object-cover group-hover:scale-105 transition-athletic"
+                  className="w-full h-64 object-contain group-hover:scale-105 transition-athletic rounded-t-xl"
                 />
                 <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
                   <Star className="h-4 w-4 fill-accent text-accent" />

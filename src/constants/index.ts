@@ -6,6 +6,14 @@ import {
   List,
 } from "lucide-react";
 
+export const userNavItems = [
+  { label: "Home", href: "/" },
+  { label: "Shop", href: "/shop" },
+  { label: "Classes", href: "/classes" },
+  { label: "Trainers", href: "/trainers"},
+  { label: "Contact", href: "/contact"},
+]
+
 export const items = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
   { icon: List, label: "Categories", href: "/admin/categories" },

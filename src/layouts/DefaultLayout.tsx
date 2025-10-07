@@ -1,3 +1,4 @@
+import Navigation from "@/components/Navigation";
 import useAuth from "@/hooks/useAuth";
 import { useThemeStore } from "@/lib/theme";
 import { useEffect } from "react";
@@ -15,10 +16,14 @@ const DefaultLayout = () => {
     if (userCredentials.role === "admin") {
       return <Navigate to="/admin" replace />;
     }
+    else if (userCredentials.role === "trainer") {
+      return <Navigate to="/trainer" replace />;
+    }
   } 
   
   return (
     <div className="min-h-screen bg-background">
+      <Navigation />
       <Outlet />
     </div>
   );

@@ -1,8 +1,48 @@
 import AuthLayout from "@/layouts/AuthLayout";
 import DefaultLayout from "@/layouts/DefaultLayout";
+import TrainerLayout from "@/layouts/TrainerLayout";
+import AdminLayout from "@/layouts/AdminLayout";
 import HomeView from "@/modules/HomeView";
+import ClassesView from "@/modules/classes/ClassesView";
 import ClassDetailView from "@/modules/classes/ClassDetailView";
+import ContactView from "@/modules/contact/ContactView";
+import ProfileView from "@/modules/user/ProfileView";
+import BookingView from "@/modules/bookings/BookingView";
+import DietPlansView from "@/modules/diet/DietPlansView";
+import ProgressView from "@/modules/progress/ProgressView";
+import StoreView from "@/modules/store/StoreView";
+import MessagesView from "@/modules/messages/MessagesView";
+import TrainersView from "@/modules/trainers/TrainersView";
 import LoginView from "@/modules/auth/Login/LoginView";
+import RegisterView from "@/modules/auth/Register/RegisterView";
+import TrainerDashboard from "@/modules/trainer/TrainerDashboard";
+import TrainerClassesView from "@/modules/trainer/TrainerClassesView";
+import TrainerSessionsView from "@/modules/trainer/TrainerSessionsView";
+import TrainerClientsView from "@/modules/trainer/TrainerClientsView";
+import TrainerBookingsView from "@/modules/trainer/TrainerBookingsView";
+import TrainerDietPlansView from "@/modules/trainer/TrainerDietPlansView";
+import TrainerClientProgressView from "@/modules/trainer/TrainerClientProgressView";
+import TrainerScheduleView from "@/modules/trainer/TrainerScheduleView";
+import TrainerMessagesView from "@/modules/trainer/TrainerMessagesView";
+import TrainerEarningsView from "@/modules/trainer/TrainerEarningsView";
+import TrainerProgramsView from "@/modules/trainer/TrainerProgramsView";
+import TrainerCertificationsView from "@/modules/trainer/TrainerCertificationsView";
+import TrainerProfileView from "@/modules/trainer/TrainerProfileView";
+import TrainerReviewsView from "@/modules/trainer/TrainerReviewsView";
+import AdminDashboard from "@/modules/admin/AdminDashboard";
+import AdminUsersView from "@/modules/admin/AdminUsersView";
+import AdminTrainersView from "@/modules/admin/AdminTrainersView";
+import AdminClassesView from "@/modules/admin/AdminClassesView";
+import AdminBookingsView from "@/modules/admin/AdminBookingsView";
+import AdminProductsView from "@/modules/admin/AdminProductsView";
+import AdminOrdersView from "@/modules/admin/AdminOrdersView";
+import AdminRevenueView from "@/modules/admin/AdminRevenueView";
+import AdminMembershipsView from "@/modules/admin/AdminMembershipsView";
+import AdminContentView from "@/modules/admin/AdminContentView";
+import AdminReportsView from "@/modules/admin/AdminReportsView";
+import AdminSettingsView from "@/modules/admin/AdminSettingsView";
+import AdminReviewsView from "@/modules/admin/AdminReviewsView";
+import AdminNotificationsView from "@/modules/admin/AdminNotificationsView";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 const Router = () => {
@@ -16,8 +56,44 @@ const Router = () => {
           element: <HomeView />,
         },
         {
+          path: "classes",
+          element: <ClassesView />,
+        },
+        {
           path: "classes/:classId",
           element: <ClassDetailView />,
+        },
+        {
+          path: "profile",
+          element: <ProfileView />,
+        },
+        {
+          path: "bookings",
+          element: <BookingView />,
+        },
+        {
+          path: "diet-plans",
+          element: <DietPlansView />,
+        },
+        {
+          path: "progress",
+          element: <ProgressView />,
+        },
+        {
+          path: "shop",
+          element: <StoreView />,
+        },
+        {
+          path: "messages",
+          element: <MessagesView />,
+        },
+        {
+          path: "trainers",
+          element: <TrainersView />,
+        },
+        {
+          path: "contact",
+          element: <ContactView />,
         },
       ],
     },
@@ -29,10 +105,134 @@ const Router = () => {
           path: "login",
           element: <LoginView />,
         },
-        // {
-        //   path: "register",
-        //   element: <RegisterView />,
-        // },
+        {
+          path: "register",
+          element: <RegisterView />,
+        },
+      ],
+    },
+    {
+      path: "/trainer",
+      element: <TrainerLayout />,
+      children: [
+        {
+          path: "",
+          element: <TrainerDashboard />,
+        },
+        {
+          path: "classes",
+          element: <TrainerClassesView />,
+        },
+        {
+          path: "sessions",
+          element: <TrainerSessionsView />,
+        },
+        {
+          path: "clients",
+          element: <TrainerClientsView />,
+        },
+        {
+          path: "bookings",
+          element: <TrainerBookingsView />,
+        },
+        {
+          path: "diet-plans",
+          element: <TrainerDietPlansView />,
+        },
+        {
+          path: "progress",
+          element: <TrainerClientProgressView />,
+        },
+        {
+          path: "schedule",
+          element: <TrainerScheduleView />,
+        },
+        {
+          path: "messages",
+          element: <TrainerMessagesView />,
+        },
+        {
+          path: "earnings",
+          element: <TrainerEarningsView />,
+        },
+        {
+          path: "programs",
+          element: <TrainerProgramsView />,
+        },
+        {
+          path: "certifications",
+          element: <TrainerCertificationsView />,
+        },
+        {
+          path: "profile",
+          element: <TrainerProfileView />,
+        },
+        {
+          path: "reviews",
+          element: <TrainerReviewsView />,
+        },
+      ],
+    },
+    {
+      path: "/admin",
+      element: <AdminLayout />,
+      children: [
+        {
+          path: "",
+          element: <AdminDashboard />,
+        },
+        {
+          path: "users",
+          element: <AdminUsersView />,
+        },
+        {
+          path: "trainers",
+          element: <AdminTrainersView />,
+        },
+        {
+          path: "classes",
+          element: <AdminClassesView />,
+        },
+        {
+          path: "bookings",
+          element: <AdminBookingsView />,
+        },
+        {
+          path: "products",
+          element: <AdminProductsView />,
+        },
+        {
+          path: "orders",
+          element: <AdminOrdersView />,
+        },
+        {
+          path: "revenue",
+          element: <AdminRevenueView />,
+        },
+        {
+          path: "memberships",
+          element: <AdminMembershipsView />,
+        },
+        {
+          path: "content",
+          element: <AdminContentView />,
+        },
+        {
+          path: "reports",
+          element: <AdminReportsView />,
+        },
+        {
+          path: "settings",
+          element: <AdminSettingsView />,
+        },
+        {
+          path: "reviews",
+          element: <AdminReviewsView />,
+        },
+        {
+          path: "notifications",
+          element: <AdminNotificationsView />,
+        },
       ],
     },
   ]);

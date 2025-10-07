@@ -173,3 +173,89 @@ body {
   border-color: oklch(var(--border));
   outline-color: oklch(var(--ring) / 0.5);
 }
+
+/* Custom Scrollbar Styles */
+/* Works for Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+  border-radius: 10px;
+  margin: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(var(--accent)), hsl(var(--accent-light)));
+  border-radius: 10px;
+  border: 2px solid hsl(var(--secondary));
+  transition: var(--transition-athletic);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, hsl(var(--accent-light)), hsl(var(--accent)));
+  border-color: hsl(var(--muted));
+  box-shadow: 0 0 10px hsl(var(--accent) / 0.3);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: hsl(var(--accent));
+}
+
+/* Thin scrollbar variant for sidebars and small containers */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border: 1px solid hsl(var(--secondary));
+}
+
+/* Hidden scrollbar variant (still scrollable) */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Firefox scrollbar styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary)) hsl(var(--secondary));
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--primary-light)));
+  border-color: hsl(var(--muted));
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, hsl(var(--primary-light)), hsl(var(--accent)));
+  box-shadow: 0 0 10px hsl(var(--accent) / 0.4);
+}
+
+/* Hide body scrollbar while retaining scroll behavior */
+body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}

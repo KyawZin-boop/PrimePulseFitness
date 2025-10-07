@@ -2,10 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShoppingCart, Star } from "lucide-react";
 import api from "@/api";
-import { useEffect } from "react";
+import { NavLink } from "react-router-dom";
 
 const Products = () => {
-  const { data: products } = api.products.getAllProducts.useQuery();
+  const { data: products } = api.products.getPopularProducts.useQuery();
 
   return (
     <section id="products" className="py-20 bg-secondary">
@@ -19,7 +19,7 @@ const Products = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {products && products.map((product) => (
-            <Card key={product.productID} className="bg-gradient-card border-0 shadow-card hover:shadow-athletic transition-athletic group overflow-hidden">
+            <Card key={product.productID} className="bg-gradient-card pt-0 border-0 shadow-card hover:shadow-athletic transition-athletic group overflow-hidden">
               <div className="relative overflow-hidden">
                 <img
                   src={product.imageUrl}
@@ -47,8 +47,8 @@ const Products = () => {
               </CardHeader>
               
               <CardFooter className="flex flex-col pt-0">
-                <div className="text-lg font-black text-primary text-left mb-2 w-full">
-                  <span className="text-accent text-md">Price - </span><span>{product.sellingPrice.toFixed(0)} Kyat</span>
+                <div className="text-md font-black text-primary text-left mb-2 w-full">
+                  <span className="text-accent text-sm">Price - </span><span>{product.sellingPrice.toFixed(0)} Kyat</span>
                 </div>
                 <Button variant="athletic" size="sm" className="group w-full">
                   <ShoppingCart className="mr-2 h-4 w-4 group-hover:scale-110 transition-athletic" />
@@ -60,9 +60,11 @@ const Products = () => {
         </div>
 
         <div className="text-center">
-          <Button variant="outline_athletic" size="xl">
-            View All Products
-          </Button>
+          <NavLink to="/shop">
+            <Button variant="outline_athletic" size="xl">
+              View All Products
+            </Button>
+          </NavLink>
         </div>
       </div>
     </section>

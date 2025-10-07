@@ -21,6 +21,19 @@ export const getAllProducts = {
     })
 };
 
+export const getPopularProducts = {
+  useQuery: (opt?: QueryOptions<ProductType[]>) => 
+    useQuery<ProductType[], Error>({
+      queryKey: ["getPopularProducts"],
+      queryFn: async () => {
+        const response: ApiResponse<ProductType[]> = await axios.get(`${BASE_URL}/GetPopularProducts`).then(res => res.data);
+
+        return response.data;
+      },
+      ...opt,
+    })
+};
+
 export const addNewProduct = {
   useMutation: (
     opt?: Partial<UseMutationOptions<null, Error, AddProductPayload>>

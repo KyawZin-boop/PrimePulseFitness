@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Users, Calendar, Star } from "lucide-react";
-import { gymClasses, type GymClass } from "@/constants/classes";
 import { useNavigate } from "react-router-dom";
+import api from "@/api";
 
 const Classes = () => {
   const navigate = useNavigate();
 
+  const { data: gymClasses } = api.classes.getPopularClasses.useQuery();
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -28,19 +29,19 @@ const Classes = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-          {gymClasses.map((classItem: GymClass) => (
-            <Card key={classItem.id} className="bg-gradient-card border-0 shadow-card hover:shadow-athletic transition-athletic group">
-              <CardHeader>
+          {gymClasses && gymClasses.map((classItem: GymClass) => (
+            <Card key={classItem.classID} className="bg-gradient-card border-0 shadow-card hover:shadow-athletic transition-athletic group">
+              <CardHeader className="flex-1">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <CardTitle className="text-xl font-bold mb-2">{classItem.name}</CardTitle>
+                    <CardTitle className="text-xl font-bold mb-2">{classItem.className}</CardTitle>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-sm font-medium text-muted-foreground">
-                        with {classItem.instructor}
+                        with {classItem.trainerName}
                       </span>
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 fill-accent text-accent" />
-                        <span className="text-sm font-medium">{classItem.rating}</span>
+                        <span className="text-sm font-medium">{classItem.rating.toFixed(1)}</span>
                       </div>
                     </div>
                   </div>
@@ -77,7 +78,7 @@ const Classes = () => {
                   <Button
                     variant="outline_athletic"
                     className="flex-1"
-                    onClick={() => navigate(`/classes/${classItem.id}`)}
+                    onClick={() => navigate(`/classes/${classItem.classID}`)}
                   >
                     View Schedule
                   </Button>
