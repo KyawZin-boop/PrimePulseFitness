@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, User } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Message } from "@/types";
 import { toast } from "sonner";
 
@@ -22,13 +22,37 @@ interface Conversation {
   unreadCount: number;
 }
 
+type ParticipantRole = Conversation["participantRole"];
+
+type SocketEnvelope = {
+  id?: string;
+  conversationId: string;
+  senderId: string;
+  senderName?: string;
+  senderRole?: ParticipantRole;
+  receiverId: string;
+  receiverName?: string;
+  receiverRole?: ParticipantRole;
+  content: string;
+  createdAt?: string;
+};
+
+const WS_URL = import.meta.env.VITE_WS_CHAT_URL ?? "ws://localhost:5000/ws/chat";
+
 const MessagesView = () => {
   const currentUserId = "user-1"; // Replace with actual user ID
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
+  const selectedConversationRef = useRef<string | null>(null);
+
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connecting" | "connected" | "disconnected"
+  >("connecting");
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState("");
 
   // Mock conversations - replace with API call
-  const [conversations] = useState<Conversation[]>([
+  const [conversations, setConversations] = useState<Conversation[]>([
     {
       id: "conv-1",
       participantId: "trainer-1",
@@ -94,31 +118,278 @@ const MessagesView = () => {
     },
   ]);
 
-  const selectedConv = conversations.find((c) => c.id === selectedConversation);
-  
-  const conversationMessages = selectedConversation
-    ? messages.filter(
+  const selectedConv = useMemo(
+    () => conversations.find((c) => c.id === selectedConversation) ?? null,
+    [conversations, selectedConversation]
+  );
+
+  const conversationMessages = useMemo(() => {
+    if (!selectedConv) {
+      return [];
+    }
+
+    return messages
+      .filter(
         (m) =>
-          (m.senderId === currentUserId && m.receiverId === selectedConv?.participantId) ||
-          (m.receiverId === currentUserId && m.senderId === selectedConv?.participantId)
+          (m.senderId === currentUserId && m.receiverId === selectedConv.participantId) ||
+          (m.receiverId === currentUserId && m.senderId === selectedConv.participantId)
       )
-    : [];
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }, [messages, selectedConv, currentUserId]);
 
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedConv) return;
+  const handleIncomingEnvelope = useCallback(
+    (payload: SocketEnvelope) => {
+      if (!payload?.conversationId) {
+        return;
+      }
 
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: currentUserId,
-      receiverId: selectedConv.participantId,
-      content: messageInput,
-      createdAt: new Date(),
-      read: false,
+      const createdAt = payload.createdAt ? new Date(payload.createdAt) : new Date();
+      const messageId = payload.id ?? `msg-${payload.conversationId}-${createdAt.getTime()}`;
+      const isOwnMessage = payload.senderId === currentUserId;
+      const activeConversationId = selectedConversationRef.current;
+      const isActiveConversation = activeConversationId === payload.conversationId;
+
+      const incomingMessage: Message = {
+        id: messageId,
+        senderId: payload.senderId,
+        receiverId: payload.receiverId,
+        content: payload.content,
+        createdAt,
+        read:
+          isOwnMessage || (payload.receiverId === currentUserId && isActiveConversation)
+            ? true
+            : payload.receiverId !== currentUserId
+            ? true
+            : false,
+      };
+
+      setMessages((prev) => {
+        if (prev.some((msg) => msg.id === incomingMessage.id)) {
+          return prev;
+        }
+        const next = [...prev, incomingMessage];
+        next.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        return next;
+      });
+
+      const otherParticipantId =
+        payload.senderId === currentUserId ? payload.receiverId : payload.senderId;
+      if (!otherParticipantId) {
+        return;
+      }
+
+      const otherParticipantName =
+        payload.senderId === currentUserId
+          ? payload.receiverName ?? "PrimePulse Member"
+          : payload.senderName ?? "PrimePulse Trainer";
+
+      const otherParticipantRole: ParticipantRole =
+        payload.senderId === currentUserId
+          ? payload.receiverRole === "user"
+            ? "user"
+            : "trainer"
+          : payload.senderRole === "trainer"
+          ? "trainer"
+          : "user";
+
+      setConversations((prev) => {
+        const existing = prev.find((conv) => conv.id === payload.conversationId);
+
+        if (existing) {
+          const nextUnread = isOwnMessage || isActiveConversation ? 0 : existing.unreadCount + 1;
+
+          const updated = prev
+            .map((conv) =>
+              conv.id === payload.conversationId
+                ? {
+                    ...conv,
+                    participantId: otherParticipantId,
+                    participantName: otherParticipantName,
+                    participantRole: otherParticipantRole,
+                    lastMessage: payload.content,
+                    lastMessageTime: createdAt,
+                    unreadCount: nextUnread,
+                  }
+                : conv
+            )
+            .sort((a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime());
+
+          return updated;
+        }
+
+        const newConversation: Conversation = {
+          id: payload.conversationId,
+          participantId: otherParticipantId,
+          participantName: otherParticipantName,
+          participantRole: otherParticipantRole,
+          lastMessage: payload.content,
+          lastMessageTime: createdAt,
+          unreadCount: isOwnMessage || isActiveConversation ? 0 : 1,
+        };
+
+        return [newConversation, ...prev];
+      });
+    },
+    [currentUserId]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+    let attempt = 0;
+
+    const connect = () => {
+      if (!isMounted) {
+        return;
+      }
+
+      setConnectionStatus("connecting");
+
+      const ws = new WebSocket(`${WS_URL}?userId=${currentUserId}`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        attempt = 0;
+        setConnectionStatus("connected");
+        if (reconnectTimeoutRef.current) {
+          window.clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const raw = typeof event.data === "string" ? event.data : "" + event.data;
+          const payload = JSON.parse(raw) as SocketEnvelope;
+          handleIncomingEnvelope(payload);
+        } catch (error) {
+          console.error("Failed to parse incoming chat message", error);
+        }
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+
+      ws.onclose = () => {
+        setConnectionStatus("disconnected");
+        if (!isMounted) {
+          return;
+        }
+        attempt += 1;
+        const delay = Math.min(10000, 1000 * attempt);
+        reconnectTimeoutRef.current = window.setTimeout(connect, delay);
+      };
     };
 
-    setMessages([...messages, newMessage]);
+    connect();
+
+    return () => {
+      isMounted = false;
+      if (reconnectTimeoutRef.current) {
+        window.clearTimeout(reconnectTimeoutRef.current);
+      }
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
+  }, [currentUserId, handleIncomingEnvelope]);
+
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
+
+  useEffect(() => {
+    if (!selectedConversation || !selectedConv) {
+      return;
+    }
+
+    setConversations((prev) => {
+      let changed = false;
+      const next = prev.map((conv) => {
+        if (conv.id === selectedConversation && conv.unreadCount > 0) {
+          changed = true;
+          return { ...conv, unreadCount: 0 };
+        }
+        return conv;
+      });
+      return changed ? next : prev;
+    });
+
+    setMessages((prev) => {
+      let changed = false;
+      const next = prev.map((msg) => {
+        if (
+          msg.senderId === selectedConv.participantId &&
+          msg.receiverId === currentUserId &&
+          !msg.read
+        ) {
+          changed = true;
+          return { ...msg, read: true };
+        }
+        return msg;
+      });
+      return changed ? next : prev;
+    });
+  }, [selectedConversation, selectedConv, currentUserId]);
+
+  const handleSendMessage = () => {
+    if (!messageInput.trim() || !selectedConv) {
+      return;
+    }
+
+    const trimmed = messageInput.trim();
+    const createdAt = new Date();
+    const messageId = `msg-${createdAt.getTime()}`;
+
+    const payload: SocketEnvelope = {
+      id: messageId,
+      conversationId: selectedConv.id,
+      senderId: currentUserId,
+      senderRole: "user",
+      receiverId: selectedConv.participantId,
+      receiverRole: selectedConv.participantRole,
+      content: trimmed,
+      createdAt: createdAt.toISOString(),
+    };
+
+    const socket = wsRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(payload));
+      toast.success("Message sent!");
+    } else {
+      toast.error("Unable to send message. Attempting to reconnect...");
+    }
+
+    const optimisticMessage: Message = {
+      id: messageId,
+      senderId: currentUserId,
+      receiverId: selectedConv.participantId,
+      content: trimmed,
+      createdAt,
+      read: true,
+    };
+
+    setMessages((prev) => {
+      const next = [...prev, optimisticMessage];
+      next.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      return next;
+    });
+
+    setConversations((prev) =>
+      prev
+        .map((conv) =>
+          conv.id === selectedConv.id
+            ? {
+                ...conv,
+                lastMessage: trimmed,
+                lastMessageTime: createdAt,
+                unreadCount: 0,
+              }
+            : conv
+        )
+        .sort((a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime())
+    );
+
     setMessageInput("");
-    toast.success("Message sent!");
   };
 
   const formatTime = (date: Date) => {
@@ -135,6 +406,17 @@ const MessagesView = () => {
     return date.toLocaleDateString();
   };
 
+  const connectionIndicator = useMemo(() => {
+    switch (connectionStatus) {
+      case "connected":
+        return { label: "Connected", dotClass: "bg-emerald-500" };
+      case "connecting":
+        return { label: "Connecting…", dotClass: "bg-amber-500" };
+      default:
+        return { label: "Disconnected", dotClass: "bg-rose-500" };
+    }
+  }, [connectionStatus]);
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
@@ -142,6 +424,10 @@ const MessagesView = () => {
         <p className="text-muted-foreground">
           Chat with your trainers and get personalized guidance
         </p>
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`} />
+          <span>{connectionIndicator.label}</span>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[350px_1fr]">
@@ -215,6 +501,10 @@ const MessagesView = () => {
                       {selectedConv.participantRole}
                     </CardDescription>
                   </div>
+                  <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`} />
+                    <span>{connectionIndicator.label}</span>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -279,6 +569,10 @@ const MessagesView = () => {
               <p className="text-sm text-muted-foreground">
                 Choose a trainer from the list to start chatting
               </p>
+              <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`} />
+                <span>{connectionIndicator.label}</span>
+              </div>
             </div>
           )}
         </Card>
