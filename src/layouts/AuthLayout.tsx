@@ -7,8 +7,7 @@ const AuthLayout = () => {
   if (isAuthenticated && !!userCredentials) {
     if (userCredentials.role === "admin") {
       return <Navigate to="/admin" replace />;
-    }
-    else if (userCredentials.role === "trainer") {
+    } else if (userCredentials.role === "trainer") {
       return <Navigate to="/trainer" replace />;
     }
     return <Navigate to="/" replace />;

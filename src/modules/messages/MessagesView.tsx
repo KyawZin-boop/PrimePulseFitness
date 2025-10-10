@@ -11,6 +11,7 @@ import { MessageCircle, Send, User } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Message } from "@/types";
 import { toast } from "sonner";
+import useAuth from "@/hooks/useAuth";
 
 interface Conversation {
   id: string;
@@ -37,10 +38,15 @@ type SocketEnvelope = {
   createdAt?: string;
 };
 
-const WS_URL = import.meta.env.VITE_WS_CHAT_URL ?? "ws://localhost:5000/ws/chat";
+const WS_URL =
+  import.meta.env.VITE_WS_CHAT_URL ?? "wss://localhost:7003/ws/chat";
 
 const MessagesView = () => {
-  const currentUserId = "user-1"; // Replace with actual user ID
+  const { userCredentials } = useAuth();
+  const currentUserId = useMemo(
+    () => userCredentials?.userId ?? "",
+    [userCredentials]
+  );
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const selectedConversationRef = useRef<string | null>(null);
@@ -48,7 +54,9 @@ const MessagesView = () => {
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
   >("connecting");
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<
+    string | null
+  >(null);
   const [messageInput, setMessageInput] = useState("");
 
   // Mock conversations - replace with API call
@@ -131,8 +139,10 @@ const MessagesView = () => {
     return messages
       .filter(
         (m) =>
-          (m.senderId === currentUserId && m.receiverId === selectedConv.participantId) ||
-          (m.receiverId === currentUserId && m.senderId === selectedConv.participantId)
+          (m.senderId === currentUserId &&
+            m.receiverId === selectedConv.participantId) ||
+          (m.receiverId === currentUserId &&
+            m.senderId === selectedConv.participantId)
       )
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }, [messages, selectedConv, currentUserId]);
@@ -143,11 +153,15 @@ const MessagesView = () => {
         return;
       }
 
-      const createdAt = payload.createdAt ? new Date(payload.createdAt) : new Date();
-      const messageId = payload.id ?? `msg-${payload.conversationId}-${createdAt.getTime()}`;
+      const createdAt = payload.createdAt
+        ? new Date(payload.createdAt)
+        : new Date();
+      const messageId =
+        payload.id ?? `msg-${payload.conversationId}-${createdAt.getTime()}`;
       const isOwnMessage = payload.senderId === currentUserId;
       const activeConversationId = selectedConversationRef.current;
-      const isActiveConversation = activeConversationId === payload.conversationId;
+      const isActiveConversation =
+        activeConversationId === payload.conversationId;
 
       const incomingMessage: Message = {
         id: messageId,
@@ -156,7 +170,8 @@ const MessagesView = () => {
         content: payload.content,
         createdAt,
         read:
-          isOwnMessage || (payload.receiverId === currentUserId && isActiveConversation)
+          isOwnMessage ||
+          (payload.receiverId === currentUserId && isActiveConversation)
             ? true
             : payload.receiverId !== currentUserId
             ? true
@@ -173,7 +188,9 @@ const MessagesView = () => {
       });
 
       const otherParticipantId =
-        payload.senderId === currentUserId ? payload.receiverId : payload.senderId;
+        payload.senderId === currentUserId
+          ? payload.receiverId
+          : payload.senderId;
       if (!otherParticipantId) {
         return;
       }
@@ -193,10 +210,13 @@ const MessagesView = () => {
           : "user";
 
       setConversations((prev) => {
-        const existing = prev.find((conv) => conv.id === payload.conversationId);
+        const existing = prev.find(
+          (conv) => conv.id === payload.conversationId
+        );
 
         if (existing) {
-          const nextUnread = isOwnMessage || isActiveConversation ? 0 : existing.unreadCount + 1;
+          const nextUnread =
+            isOwnMessage || isActiveConversation ? 0 : existing.unreadCount + 1;
 
           const updated = prev
             .map((conv) =>
@@ -212,7 +232,10 @@ const MessagesView = () => {
                   }
                 : conv
             )
-            .sort((a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime());
+            .sort(
+              (a, b) =>
+                b.lastMessageTime.getTime() - a.lastMessageTime.getTime()
+            );
 
           return updated;
         }
@@ -258,7 +281,8 @@ const MessagesView = () => {
 
       ws.onmessage = (event) => {
         try {
-          const raw = typeof event.data === "string" ? event.data : "" + event.data;
+          const raw =
+            typeof event.data === "string" ? event.data : "" + event.data;
           const payload = JSON.parse(raw) as SocketEnvelope;
           handleIncomingEnvelope(payload);
         } catch (error) {
@@ -386,7 +410,9 @@ const MessagesView = () => {
               }
             : conv
         )
-        .sort((a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime())
+        .sort(
+          (a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime()
+        )
     );
 
     setMessageInput("");
@@ -425,7 +451,9 @@ const MessagesView = () => {
           Chat with your trainers and get personalized guidance
         </p>
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`} />
+          <span
+            className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`}
+          />
           <span>{connectionIndicator.label}</span>
         </div>
       </div>
@@ -502,7 +530,9 @@ const MessagesView = () => {
                     </CardDescription>
                   </div>
                   <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`} />
+                    <span
+                      className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`}
+                    />
                     <span>{connectionIndicator.label}</span>
                   </div>
                 </div>
@@ -515,7 +545,9 @@ const MessagesView = () => {
                     return (
                       <div
                         key={message.id}
-                        className={`flex ${isSent ? "justify-end" : "justify-start"}`}
+                        className={`flex ${
+                          isSent ? "justify-end" : "justify-start"
+                        }`}
                       >
                         <div
                           className={`max-w-[70%] rounded-lg px-4 py-2 ${
@@ -555,7 +587,10 @@ const MessagesView = () => {
                         }
                       }}
                     />
-                    <Button onClick={handleSendMessage} disabled={!messageInput.trim()}>
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={!messageInput.trim()}
+                    >
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
@@ -570,7 +605,9 @@ const MessagesView = () => {
                 Choose a trainer from the list to start chatting
               </p>
               <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`} />
+                <span
+                  className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`}
+                />
                 <span>{connectionIndicator.label}</span>
               </div>
             </div>

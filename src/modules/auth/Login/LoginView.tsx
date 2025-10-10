@@ -17,7 +17,13 @@ import { GoogleLogin } from "@react-oauth/google";
 import api from "@/api";
 import { toast } from "sonner";
 import useAuth from "@/hooks/useAuth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const formSchema = z.object({
   email: z
@@ -45,7 +51,20 @@ const LoginView = () => {
     api.auth.googleLoginMutation.useMutation({
       onSuccess: (data: string) => {
         userLogin(data);
-        navigate("/");
+        navigate(-1);
+        toast.success("Login successful!");
+      },
+
+      onError: () => {
+        toast.error("Login failed! Please try again.");
+      },
+    });
+
+  const { mutate: login, isPending: loginPending } =
+    api.auth.loginMutation.useMutation({
+      onSuccess: (data: string) => {
+        userLogin(data);
+        navigate(-1);
         toast.success("Login successful!");
       },
 
@@ -55,19 +74,21 @@ const LoginView = () => {
     });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+    login(values);
   }
 
   return (
     <div className="w-full h-full flex justify-center items-center bg-primary">
       <div className="w-full max-w-md relative z-10">
-      <Card className="shadow-athletic bg-gradient-card border-0 backdrop-blur-sm">
+        <Card className="shadow-athletic bg-gradient-card border-0 backdrop-blur-sm">
           <CardHeader className="text-center space-y-6 pb-8">
             <div className="mx-auto w-16 h-16 bg-gradient-accent rounded-2xl flex items-center justify-center shadow-accent">
               <div className="w-8 h-8 bg-accent-foreground rounded-lg"></div>
             </div>
             <div className="space-y-2">
-              <CardTitle className="text-heading text-foreground">Welcome Back</CardTitle>
+              <CardTitle className="text-heading text-foreground">
+                Welcome Back
+              </CardTitle>
               <CardDescription className="text-muted-foreground text-base">
                 Transform your fitness journey with us
               </CardDescription>
@@ -99,7 +120,9 @@ const LoginView = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg font-light">Email</FormLabel>
+                      <FormLabel className="text-lg font-light">
+                        Email
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Email" {...field} />
                       </FormControl>
@@ -114,7 +137,9 @@ const LoginView = () => {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg font-light">Password</FormLabel>
+                      <FormLabel className="text-lg font-light">
+                        Password
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Password" {...field} />
                       </FormControl>
@@ -127,7 +152,7 @@ const LoginView = () => {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={googleLoginPending}
+                  disabled={googleLoginPending || loginPending}
                 >
                   Submit
                 </Button>
@@ -167,9 +192,9 @@ const LoginView = () => {
                 Sign up here
               </span>
             </div>
-            </CardContent>
-          </Card>
-        </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

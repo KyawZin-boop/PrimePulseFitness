@@ -16,23 +16,33 @@ import {
   Bell,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import useAuth from "@/hooks/useAuth";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Command, CommandItem, CommandList } from "@/components/ui/command";
 
 const AdminLayout = () => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { userCredentials } = useAuth();
+  const { userCredentials, userLogout, isAuthenticated } = useAuth();
 
-  if (!!userCredentials) {
-    if (userCredentials.role === "user") {
-      return <Navigate to="/" replace />;
+  if (isAuthenticated) {
+    if (!!userCredentials) {
+      if (userCredentials.role === "user") {
+        return <Navigate to="/" replace />;
+      } else if (userCredentials.role === "trainer") {
+        return <Navigate to="/trainer" replace />;
+      }
     }
-    else if (userCredentials.role === "trainer") {
-      return <Navigate to="/trainer" replace />;
-    }
-  } 
+  } else {
+    return <Navigate to="/" replace />;
+  }
 
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -117,17 +127,33 @@ const AdminLayout = () => {
 
           {/* User Info */}
           <div className="border-t p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center text-white font-semibold">
-                A
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Admin User</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  admin@primepulse.com
-                </p>
-              </div>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild className="cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center text-white font-semibold">
+                    {userCredentials?.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {userCredentials?.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {userCredentials?.email}
+                    </p>
+                  </div>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-56" align="end">
+                <Command>
+                  <CommandList>
+                    <CommandItem onSelect={userLogout}>
+                      <LogOut className="text-white mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </CommandItem>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </aside>

@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
@@ -15,39 +15,39 @@ import {
   Star,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import useAuth from "@/hooks/useAuth";
 
 const TrainerLayout = () => {
   const navigate = useNavigate();
-  const { userCredentials } = useAuth();
+  const location = useLocation();
+  const { userCredentials, userLogout, isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  if (!!userCredentials) {
-    if (userCredentials.role === "admin") {
-      return <Navigate to="/admin" replace />;
+  if (isAuthenticated) {
+    if (!!userCredentials) {
+      if (userCredentials.role === "admin") {
+        return <Navigate to="/admin" replace />;
+      } else if (userCredentials.role === "user") {
+        return <Navigate to="/" replace />;
+      }
     }
-    else if (userCredentials.role === "user") {
-      return <Navigate to="/" replace />;
-    }
-  } 
+  } else {
+    return <Navigate to="/" replace />;
+  }
 
   const navItems = [
     {
       icon: <LayoutDashboard className="h-5 w-5" />,
       label: "Dashboard",
-      path: "/trainer/dashboard",
+      path: "/trainer",
     },
     {
       icon: <Dumbbell className="h-5 w-5" />,
       label: "My Classes",
       path: "/trainer/classes",
-    },
-    {
-      icon: <Calendar className="h-5 w-5" />,
-      label: "Sessions",
-      path: "/trainer/sessions",
     },
     {
       icon: <Users className="h-5 w-5" />,
@@ -134,34 +134,41 @@ const TrainerLayout = () => {
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4">
             <ul className="space-y-1">
-              {navItems.map((item) => (
-                <li key={item.path}>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      navigate(item.path);
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    {item.icon}
-                    <span className="ml-3">{item.label}</span>
-                  </Button>
-                </li>
-              ))}
+              {navItems.map((item) => {
+                const isActive =
+                  item.path === "/trainer"
+                    ? location.pathname === item.path
+                    : location.pathname.startsWith(item.path);
+                return (
+                  <li key={item.path}>
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start ${
+                        isActive ? "bg-accent text-accent-foreground" : ""
+                      }`}
+                      onClick={() => {
+                        navigate(item.path);
+                        setSidebarOpen(false);
+                      }}
+                    >
+                      {item.icon}
+                      <span className="ml-3">{item.label}</span>
+                    </Button>
+                  </li>
+                );
+              })}
             </ul>
+            <div className="border-t pt-4 mt-auto">
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => userLogout()}
+              >
+                <LogOut className="h-5 w-5" />
+                <span className="ml-3">Logout</span>
+              </Button>
+            </div>
           </nav>
-
-          {/* Footer */}
-          <div className="border-t p-4">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate("/")}
-            >
-              Back to User View
-            </Button>
-          </div>
         </div>
       </aside>
 

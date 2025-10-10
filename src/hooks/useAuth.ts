@@ -13,6 +13,7 @@ export default function useAuth() {
     try {
       const decoded: JwtPayload = jwtDecode<JwtPayload>(cookieToken);
       initialCredentials = {
+        userId: decoded["userID"],
         name: decoded[
           "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
         ],
@@ -48,6 +49,7 @@ export default function useAuth() {
       const decoded: JwtPayload = jwtDecode<JwtPayload>(token);
 
       setUserCredentials({
+        userId: decoded["userID"],
         name: decoded[
           "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
         ],

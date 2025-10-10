@@ -11,21 +11,21 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import type { UserRole } from "@/types";
 import { toast } from "sonner";
-import { Dumbbell, UserCircle } from "lucide-react";
+import { Dumbbell, Loader } from "lucide-react";
+import api from "@/api";
+import useAuth from "@/hooks/useAuth";
 
 const RegisterView = () => {
   const navigate = useNavigate();
+  const { userLogin } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user" as UserRole,
     age: "",
     gender: "",
-    phone: "",
     termsAccepted: false,
   });
 
@@ -48,21 +48,41 @@ const RegisterView = () => {
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
-    if (!formData.termsAccepted) {
-      newErrors.terms = "You must accept the terms and conditions";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const { mutate: register, isPending: registerPending } =
+    api.auth.registerMutation.useMutation({
+      onSuccess: (data: string) => {
+        userLogin(data);
+        navigate(-1);
+        toast.success("Login successful!");
+      },
+
+      onError: () => {
+        toast.error("Login failed! Please try again.");
+      },
+    });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
       // API call to register user
-      console.log("Registration data:", formData);
-      toast.success("Account created successfully!");
-      navigate("/auth/login");
+      // console.log("Registration data:", formData);
+      // toast.success("Account created successfully!");
+      // navigate("/auth/login");
+
+      const payload: RegisterPayload = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        age: parseInt(formData.age),
+        gender: formData.gender,
+      };
+
+      register(payload);
     }
   };
 
@@ -80,43 +100,6 @@ const RegisterView = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Role Selection */}
-            <div className="space-y-2">
-              <Label>I am a:</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: "user" })}
-                  className={`rounded-lg border-2 p-4 text-left transition ${
-                    formData.role === "user"
-                      ? "border-accent bg-accent/5"
-                      : "border-border hover:border-accent/50"
-                  }`}
-                >
-                  <UserCircle className="mb-2 h-6 w-6 text-accent" />
-                  <div className="font-semibold">Fitness Enthusiast</div>
-                  <div className="text-xs text-muted-foreground">
-                    Join classes and track progress
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: "trainer" })}
-                  className={`rounded-lg border-2 p-4 text-left transition ${
-                    formData.role === "trainer"
-                      ? "border-accent bg-accent/5"
-                      : "border-border hover:border-accent/50"
-                  }`}
-                >
-                  <Dumbbell className="mb-2 h-6 w-6 text-accent" />
-                  <div className="font-semibold">Trainer</div>
-                  <div className="text-xs text-muted-foreground">
-                    Lead classes and coach clients
-                  </div>
-                </button>
-              </div>
-            </div>
-
             {/* Personal Information */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -182,11 +165,16 @@ const RegisterView = () => {
                   placeholder="Re-enter password"
                   value={formData.confirmPassword}
                   onChange={(e) =>
-                    setFormData({ ...formData, confirmPassword: e.target.value })
+                    setFormData({
+                      ...formData,
+                      confirmPassword: e.target.value,
+                    })
                   }
                 />
                 {errors.confirmPassword && (
-                  <p className="text-xs text-red-500">{errors.confirmPassword}</p>
+                  <p className="text-xs text-red-500">
+                    {errors.confirmPassword}
+                  </p>
                 )}
               </div>
             </div>
@@ -222,19 +210,6 @@ const RegisterView = () => {
                   <option value="other">Other</option>
                 </select>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+1 234 567 8900"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                />
-              </div>
             </div>
 
             {/* Terms and Conditions */}
@@ -244,7 +219,10 @@ const RegisterView = () => {
                   id="terms"
                   checked={formData.termsAccepted}
                   onCheckedChange={(checked) =>
-                    setFormData({ ...formData, termsAccepted: checked as boolean })
+                    setFormData({
+                      ...formData,
+                      termsAccepted: checked as boolean,
+                    })
                   }
                 />
                 <label
@@ -267,8 +245,13 @@ const RegisterView = () => {
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" size="lg" className="w-full">
-              Create Account
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={registerPending}
+            >
+              Create Account {registerPending && <Loader className="spin" />}
             </Button>
 
             {/* Login Link */}

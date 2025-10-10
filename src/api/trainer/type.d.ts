@@ -11,6 +11,7 @@ type Trainer = {
   certifications: string[];
   description: string;
   specialties: string[];
+  fees: number;
 };
 
 type AddTrainer = {
