@@ -138,7 +138,7 @@ const TrainersView = () => {
   };
 
   const handleSendMessage = (trainer: Trainer) => {
-    navigate("/messages");
+    navigate(`/messages?trainer=${trainer.userID}`);
     toast.success(`Opening chat with ${trainer.name}`);
   };
 

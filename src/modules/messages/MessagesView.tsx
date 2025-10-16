@@ -7,458 +7,322 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, User } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Message } from "@/types";
+import { AlertCircle, ImagePlus, Loader2, MessageCircle, RefreshCw, Send, User, XCircle } from "lucide-react";
+import { act, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import useAuth from "@/hooks/useAuth";
+import api from "@/api";
+import { useSearchParams } from "react-router-dom";
+import { useChat } from "@/hooks/useChat";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-interface Conversation {
-  id: string;
-  participantId: string;
-  participantName: string;
-  participantRole: "trainer" | "user";
-  lastMessage: string;
-  lastMessageTime: Date;
-  unreadCount: number;
-}
-
-type ParticipantRole = Conversation["participantRole"];
-
-type SocketEnvelope = {
-  id?: string;
-  conversationId: string;
-  senderId: string;
-  senderName?: string;
-  senderRole?: ParticipantRole;
-  receiverId: string;
-  receiverName?: string;
-  receiverRole?: ParticipantRole;
-  content: string;
-  createdAt?: string;
+const STATUS_LABEL: Record<NonNullable<ChatMessage["status"]>, string> = {
+  pending: "Pending",
+  sent: "Sent",
+  delivered: "Delivered",
+  read: "Read",
+  error: "Failed",
 };
 
-const WS_URL =
-  import.meta.env.VITE_WS_CHAT_URL ?? "wss://localhost:7003/ws/chat";
+const connectionMeta: Record<ChatConnectionState, { label: string; className: string }> = {
+  idle: { label: "Idle", className: "bg-muted text-muted-foreground" },
+  connecting: { label: "Connecting", className: "bg-amber-100 text-amber-700" },
+  open: { label: "Connected", className: "bg-emerald-100 text-emerald-700" },
+  closing: { label: "Closing", className: "bg-amber-200 text-amber-800" },
+  closed: { label: "Disconnected", className: "bg-gray-200 text-gray-700" },
+  error: { label: "Error", className: "bg-destructive/10 text-destructive" },
+};
+
+const buildConversationId = (first: string, second: string) => {
+  const [a, b] = [first, second].sort((x, y) => x.localeCompare(y));
+  return `conversation:${a}:${b}`;
+};
+
+const parseTimestamp = (timestamp: string) => {
+  if (!timestamp) {
+    return null;
+  }
+
+  const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(timestamp);
+  const normalized = hasTimezone ? timestamp : `${timestamp}Z`;
+  const date = new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+};
+
+const formatTimestamp = (timestamp: string) => {
+  const date = parseTimestamp(timestamp);
+  if (!date) {
+    return "Unknown time";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  }).format(date);
+};
+
+const filterTrainers = (trainers: Trainer[] | undefined, term: string) => {
+  if (!trainers) {
+    return [];
+  }
+
+  const trimmed = term.trim().toLowerCase();
+  if (!trimmed) {
+    return trainers;
+  }
+
+  return trainers.filter((trainer) => {
+    return (
+      trainer.name?.toLowerCase().includes(trimmed) ||
+      trainer.email?.toLowerCase().includes(trimmed)
+    );
+  });
+};
 
 const MessagesView = () => {
-  const { userCredentials } = useAuth();
+  const { userCredentials: currentUser } = useAuth();
   const currentUserId = useMemo(
-    () => userCredentials?.userId ?? "",
-    [userCredentials]
-  );
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
-  const selectedConversationRef = useRef<string | null>(null);
-
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connecting" | "connected" | "disconnected"
-  >("connecting");
-  const [selectedConversation, setSelectedConversation] = useState<
-    string | null
-  >(null);
-  const [messageInput, setMessageInput] = useState("");
-
-  // Mock conversations - replace with API call
-  const [conversations, setConversations] = useState<Conversation[]>([
-    {
-      id: "conv-1",
-      participantId: "trainer-1",
-      participantName: "Mike Chen",
-      participantRole: "trainer",
-      lastMessage: "Great progress on your strength training!",
-      lastMessageTime: new Date("2025-10-04T14:30:00"),
-      unreadCount: 2,
-    },
-    {
-      id: "conv-2",
-      participantId: "trainer-2",
-      participantName: "Sarah Williams",
-      participantRole: "trainer",
-      lastMessage: "Let's schedule your next cardio session",
-      lastMessageTime: new Date("2025-10-03T10:15:00"),
-      unreadCount: 0,
-    },
-    {
-      id: "conv-3",
-      participantId: "trainer-3",
-      participantName: "Alex Rodriguez",
-      participantRole: "trainer",
-      lastMessage: "Thanks for the diet plan feedback!",
-      lastMessageTime: new Date("2025-10-02T16:45:00"),
-      unreadCount: 1,
-    },
-  ]);
-
-  // Mock messages - replace with API call
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "msg-1",
-      senderId: "trainer-1",
-      receiverId: currentUserId,
-      content: "Hi! How are you feeling after yesterday's workout?",
-      createdAt: new Date("2025-10-04T13:00:00"),
-      read: true,
-    },
-    {
-      id: "msg-2",
-      senderId: currentUserId,
-      receiverId: "trainer-1",
-      content: "Great! A bit sore but in a good way. I'm ready for more!",
-      createdAt: new Date("2025-10-04T13:15:00"),
-      read: true,
-    },
-    {
-      id: "msg-3",
-      senderId: "trainer-1",
-      receiverId: currentUserId,
-      content: "Perfect! That means your muscles are adapting. Keep it up!",
-      createdAt: new Date("2025-10-04T14:20:00"),
-      read: false,
-    },
-    {
-      id: "msg-4",
-      senderId: "trainer-1",
-      receiverId: currentUserId,
-      content: "Great progress on your strength training!",
-      createdAt: new Date("2025-10-04T14:30:00"),
-      read: false,
-    },
-  ]);
-
-  const selectedConv = useMemo(
-    () => conversations.find((c) => c.id === selectedConversation) ?? null,
-    [conversations, selectedConversation]
+    () => currentUser?.userId ?? "",
+    [currentUser]
   );
 
-  const conversationMessages = useMemo(() => {
-    if (!selectedConv) {
+  const { data: trainers, isLoading: isTrainersLoading, isError: isTrainersError, refetch: refetchTrainers } =
+    api.trainers.getAllTrainers.useQuery();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const trainerIdFromQuery = searchParams.get("trainer");
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTrainerId, setActiveTrainerId] = useState<string | null>(trainerIdFromQuery);
+  const [draft, setDraft] = useState("");
+  const [attachmentUrl, setAttachmentUrl] = useState<string>("");
+
+  const messageEndRef = useRef<HTMLDivElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+
+   useEffect(() => {
+    if (!trainers?.length) return;
+    // Only set on initial load if no activeTrainerId
+    setActiveTrainerId((prev) => {
+      if (prev && trainers.some((trainer) => trainer.userID === prev)) {
+        return prev;
+      }
+      if (trainerIdFromQuery && trainers.some((trainer) => trainer.userID === trainerIdFromQuery)) {
+        return trainerIdFromQuery;
+      }
+      return trainers[0]?.userID ?? null;
+    });
+    // Only run when trainers change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trainers]);
+
+  useEffect(() => {
+    if (!activeTrainerId) {
+      if (trainerIdFromQuery) {
+        setSearchParams({}, { replace: true });
+      }
+      return;
+    }
+    if (trainerIdFromQuery !== activeTrainerId) {
+      setSearchParams({ trainer: activeTrainerId }, { replace: true });
+    }
+  }, [activeTrainerId, trainerIdFromQuery, setSearchParams]);
+
+  const filteredTrainers = useMemo(
+    () => filterTrainers(trainers, searchTerm),
+    [trainers, searchTerm]
+  );
+
+  const activeTrainer = trainers?.find((trainer) => trainer.userID === activeTrainerId) ?? null;
+
+  const chatIdentity = currentUser
+    ? { id: currentUser.userId, name: currentUser.name, email: currentUser.email }
+    : null;
+  const peerIdentity = activeTrainer
+    ? { id: activeTrainer.userID, name: activeTrainer.name, email: activeTrainer.email }
+    : null;
+
+  const conversationId = chatIdentity && peerIdentity
+    ? buildConversationId(chatIdentity.id, peerIdentity.id)
+    : undefined;
+
+  const loadHistory = useCallback(async () => {
+    if (!conversationId || !chatIdentity?.id || !peerIdentity?.id) {
       return [];
     }
 
-    return messages
-      .filter(
-        (m) =>
-          (m.senderId === currentUserId &&
-            m.receiverId === selectedConv.participantId) ||
-          (m.receiverId === currentUserId &&
-            m.senderId === selectedConv.participantId)
-      )
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  }, [messages, selectedConv, currentUserId]);
-
-  const handleIncomingEnvelope = useCallback(
-    (payload: SocketEnvelope) => {
-      if (!payload?.conversationId) {
-        return;
-      }
-
-      const createdAt = payload.createdAt
-        ? new Date(payload.createdAt)
-        : new Date();
-      const messageId =
-        payload.id ?? `msg-${payload.conversationId}-${createdAt.getTime()}`;
-      const isOwnMessage = payload.senderId === currentUserId;
-      const activeConversationId = selectedConversationRef.current;
-      const isActiveConversation =
-        activeConversationId === payload.conversationId;
-
-      const incomingMessage: Message = {
-        id: messageId,
-        senderId: payload.senderId,
-        receiverId: payload.receiverId,
-        content: payload.content,
-        createdAt,
-        read:
-          isOwnMessage ||
-          (payload.receiverId === currentUserId && isActiveConversation)
-            ? true
-            : payload.receiverId !== currentUserId
-            ? true
-            : false,
-      };
-
-      setMessages((prev) => {
-        if (prev.some((msg) => msg.id === incomingMessage.id)) {
-          return prev;
-        }
-        const next = [...prev, incomingMessage];
-        next.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-        return next;
+    try {
+      const history = await api.chat.getChatHistory({
+        userId: chatIdentity.id,
+        trainerId: peerIdentity.id,
       });
 
-      const otherParticipantId =
-        payload.senderId === currentUserId
-          ? payload.receiverId
-          : payload.senderId;
-      if (!otherParticipantId) {
-        return;
-      }
+      return history
+        .map((item) => api.chat.mapHistoryItemToChatMessage(item, buildConversationId))
+        .filter((item): item is ChatMessage => !!item && item.conversationId === conversationId);
+    } catch (error) {
+      console.error("Failed to fetch chat history", error);
+      throw error;
+    }
+  }, [chatIdentity?.id, conversationId, peerIdentity?.id]);
 
-      const otherParticipantName =
-        payload.senderId === currentUserId
-          ? payload.receiverName ?? "PrimePulse Member"
-          : payload.senderName ?? "PrimePulse Trainer";
+  useEffect(() => {
+    if (activeTrainerId) {
+      // peerIdentity = activeTrainer
+    }
+  }, [activeTrainerId]);
 
-      const otherParticipantRole: ParticipantRole =
-        payload.senderId === currentUserId
-          ? payload.receiverRole === "user"
-            ? "user"
-            : "trainer"
-          : payload.senderRole === "trainer"
-          ? "trainer"
-          : "user";
+  const {
+    connectionState,
+    messages,
+    sendMessage,
+    lastError,
+    reconnect,
+    clearMessages,
+    isHistoryLoading,
+    historyLoaded,
+  } = useChat({
+    conversationId,
+    currentUser: chatIdentity ?? undefined,
+    peer: peerIdentity ?? undefined,
+    loadHistory,
+  });
 
-      setConversations((prev) => {
-        const existing = prev.find(
-          (conv) => conv.id === payload.conversationId
-        );
+  const isLoadingInitial = isTrainersLoading || isHistoryLoading;
+  const hasChatTarget = !!chatIdentity && !!peerIdentity;
 
-        if (existing) {
-          const nextUnread =
-            isOwnMessage || isActiveConversation ? 0 : existing.unreadCount + 1;
+  useEffect(() => {
+    if (messageEndRef.current) {
+      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, activeTrainerId]);
 
-          const updated = prev
-            .map((conv) =>
-              conv.id === payload.conversationId
-                ? {
-                    ...conv,
-                    participantId: otherParticipantId,
-                    participantName: otherParticipantName,
-                    participantRole: otherParticipantRole,
-                    lastMessage: payload.content,
-                    lastMessageTime: createdAt,
-                    unreadCount: nextUnread,
-                  }
-                : conv
-            )
-            .sort(
-              (a, b) =>
-                b.lastMessageTime.getTime() - a.lastMessageTime.getTime()
-            );
+  useEffect(() => {
+    setAttachmentUrl("");
+  }, [conversationId]);
 
-          return updated;
-        }
-
-        const newConversation: Conversation = {
-          id: payload.conversationId,
-          participantId: otherParticipantId,
-          participantName: otherParticipantName,
-          participantRole: otherParticipantRole,
-          lastMessage: payload.content,
-          lastMessageTime: createdAt,
-          unreadCount: isOwnMessage || isActiveConversation ? 0 : 1,
-        };
-
-        return [newConversation, ...prev];
-      });
+  const {
+    mutate: uploadAttachment,
+    isPending: isUploadingAttachment,
+  } = api.files.uploadFile.useMutation({
+    onMutate: () => {
+      setAttachmentUrl("");
     },
-    [currentUserId]
-  );
+    onSuccess: (url) => {
+      setAttachmentUrl(url);
+      toast.success("Image attached");
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to upload image. Please try again.";
+      toast.error(message);
+    },
+  });
 
-  useEffect(() => {
-    let isMounted = true;
-    let attempt = 0;
+  const canSubmit =
+    hasChatTarget &&
+    !isUploadingAttachment &&
+    !isLoadingInitial &&
+    (!!draft.trim() || !!attachmentUrl);
 
-    const connect = () => {
-      if (!isMounted) {
-        return;
-      }
-
-      setConnectionStatus("connecting");
-
-      const ws = new WebSocket(`${WS_URL}?userId=${currentUserId}`);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        attempt = 0;
-        setConnectionStatus("connected");
-        if (reconnectTimeoutRef.current) {
-          window.clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
-        }
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const raw =
-            typeof event.data === "string" ? event.data : "" + event.data;
-          const payload = JSON.parse(raw) as SocketEnvelope;
-          handleIncomingEnvelope(payload);
-        } catch (error) {
-          console.error("Failed to parse incoming chat message", error);
-        }
-      };
-
-      ws.onerror = () => {
-        ws.close();
-      };
-
-      ws.onclose = () => {
-        setConnectionStatus("disconnected");
-        if (!isMounted) {
-          return;
-        }
-        attempt += 1;
-        const delay = Math.min(10000, 1000 * attempt);
-        reconnectTimeoutRef.current = window.setTimeout(connect, delay);
-      };
-    };
-
-    connect();
-
-    return () => {
-      isMounted = false;
-      if (reconnectTimeoutRef.current) {
-        window.clearTimeout(reconnectTimeoutRef.current);
-      }
-      wsRef.current?.close();
-      wsRef.current = null;
-    };
-  }, [currentUserId, handleIncomingEnvelope]);
-
-  useEffect(() => {
-    selectedConversationRef.current = selectedConversation;
-  }, [selectedConversation]);
-
-  useEffect(() => {
-    if (!selectedConversation || !selectedConv) {
+  const handleAttachmentClick = () => {
+    if (!hasChatTarget || isUploadingAttachment) {
       return;
     }
 
-    setConversations((prev) => {
-      let changed = false;
-      const next = prev.map((conv) => {
-        if (conv.id === selectedConversation && conv.unreadCount > 0) {
-          changed = true;
-          return { ...conv, unreadCount: 0 };
-        }
-        return conv;
-      });
-      return changed ? next : prev;
-    });
-
-    setMessages((prev) => {
-      let changed = false;
-      const next = prev.map((msg) => {
-        if (
-          msg.senderId === selectedConv.participantId &&
-          msg.receiverId === currentUserId &&
-          !msg.read
-        ) {
-          changed = true;
-          return { ...msg, read: true };
-        }
-        return msg;
-      });
-      return changed ? next : prev;
-    });
-  }, [selectedConversation, selectedConv, currentUserId]);
-
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedConv) {
-      return;
-    }
-
-    const trimmed = messageInput.trim();
-    const createdAt = new Date();
-    const messageId = `msg-${createdAt.getTime()}`;
-
-    const payload: SocketEnvelope = {
-      id: messageId,
-      conversationId: selectedConv.id,
-      senderId: currentUserId,
-      senderRole: "user",
-      receiverId: selectedConv.participantId,
-      receiverRole: selectedConv.participantRole,
-      content: trimmed,
-      createdAt: createdAt.toISOString(),
-    };
-
-    const socket = wsRef.current;
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(payload));
-      toast.success("Message sent!");
-    } else {
-      toast.error("Unable to send message. Attempting to reconnect...");
-    }
-
-    const optimisticMessage: Message = {
-      id: messageId,
-      senderId: currentUserId,
-      receiverId: selectedConv.participantId,
-      content: trimmed,
-      createdAt,
-      read: true,
-    };
-
-    setMessages((prev) => {
-      const next = [...prev, optimisticMessage];
-      next.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-      return next;
-    });
-
-    setConversations((prev) =>
-      prev
-        .map((conv) =>
-          conv.id === selectedConv.id
-            ? {
-                ...conv,
-                lastMessage: trimmed,
-                lastMessageTime: createdAt,
-                unreadCount: 0,
-              }
-            : conv
-        )
-        .sort(
-          (a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime()
-        )
-    );
-
-    setMessageInput("");
+    attachmentInputRef.current?.click();
   };
 
-  const formatTime = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+  const handleAttachmentChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
 
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+      uploadAttachment(file);
+      event.target.value = "";
+    },
+    [uploadAttachment]
+  );
+
+  const handleRemoveAttachment = () => {
+    setAttachmentUrl("");
+  };
+
+  const handleSend = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (isUploadingAttachment || !hasChatTarget) {
+      return;
+    }
+
+    const trimmed = draft.trim();
+    const imageUrl = attachmentUrl || null;
+    if (!trimmed && !imageUrl) {
+      return;
+    }
+
+    const result = sendMessage(trimmed, { imageUrl });
+    if (result) {
+      setDraft("");
+      setAttachmentUrl("");
+    }
   };
 
   const connectionIndicator = useMemo(() => {
-    switch (connectionStatus) {
-      case "connected":
+    switch (connectionState) {
+      case "open":
         return { label: "Connected", dotClass: "bg-emerald-500" };
       case "connecting":
         return { label: "Connecting…", dotClass: "bg-amber-500" };
       default:
         return { label: "Disconnected", dotClass: "bg-rose-500" };
     }
-  }, [connectionStatus]);
+  }, [connectionState]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (isUploadingAttachment || !hasChatTarget) {
+      return;
+    }
+
+    const trimmed = draft.trim();
+    const imageUrl = attachmentUrl || null;
+    if (!trimmed && !imageUrl) {
+      return;
+    }
+
+    const result = sendMessage(trimmed, { imageUrl });
+    if (result) {
+      setDraft("");
+      setAttachmentUrl("");
+    }
+  };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-heading mb-2">Messages</h1>
-        <p className="text-muted-foreground">
-          Chat with your trainers and get personalized guidance
-        </p>
-        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <span
-            className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`}
-          />
-          <span>{connectionIndicator.label}</span>
-        </div>
-      </div>
+    <div className="container flex justify-center items-center py-8 px-4 h-screen">
 
-      <div className="grid gap-6 lg:grid-cols-[350px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[350px_1fr] flex-1">
         {/* Conversations List */}
         <Card className="shadow-card">
           <CardHeader>
@@ -466,57 +330,69 @@ const MessagesView = () => {
               <MessageCircle className="h-5 w-5 text-accent" />
               Conversations
             </CardTitle>
-            <CardDescription>Your active chats with trainers</CardDescription>
+            <CardDescription>Your chats with trainers</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {conversations.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                No conversations yet
+            {isTrainersLoading && (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="flex items-center gap-3 rounded-md border p-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {!isTrainersLoading && !isTrainersError && filteredTrainers.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground">
+                No trainers match that search.
               </p>
-            ) : (
-              conversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  onClick={() => setSelectedConversation(conv.id)}
-                  className={`cursor-pointer rounded-lg border p-3 transition hover:shadow-md ${
-                    selectedConversation === conv.id
-                      ? "border-accent bg-accent/5"
-                      : "bg-card"
-                  }`}
-                >
+            )}
+
+            {!isTrainersLoading && !isTrainersError && filteredTrainers.length > 0 && (
+              filteredTrainers.map((conv) => {
+                const trainerId = conv.userID ?? conv.trainerID;
+                if (!trainerId) {
+                  return null;
+                }
+
+                return (
+                  <div
+                    key={trainerId}
+                    onClick={() => setActiveTrainerId(trainerId)}
+                    className={`cursor-pointer rounded-lg border p-3 transition hover:shadow-md ${
+                      activeTrainerId === trainerId
+                        ? "border-accent bg-accent/5"
+                        : "bg-card"
+                    }`}
+                  >
                   <div className="mb-2 flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
                         <User className="h-5 w-5" />
                       </div>
                       <div>
-                        <h4 className="font-medium">{conv.participantName}</h4>
+                        <h4 className="font-medium">{conv.name}</h4>
                         <p className="text-xs text-muted-foreground capitalize">
-                          {conv.participantRole}
+                          {conv.email}
                         </p>
                       </div>
                     </div>
-                    {conv.unreadCount > 0 && (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs text-white">
-                        {conv.unreadCount}
-                      </span>
-                    )}
                   </div>
-                  <p className="line-clamp-1 text-sm text-muted-foreground">
-                    {conv.lastMessage}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatTime(conv.lastMessageTime)}
-                  </p>
                 </div>
-              ))
+                );
+              })
             )}
           </CardContent>
         </Card>
 
         {/* Message Thread */}
         <Card className="shadow-card">
-          {selectedConv ? (
+          {peerIdentity ? (
             <>
               <CardHeader className="border-b">
                 <div className="flex items-center gap-3">
@@ -524,77 +400,205 @@ const MessagesView = () => {
                     <User className="h-6 w-6" />
                   </div>
                   <div>
-                    <CardTitle>{selectedConv.participantName}</CardTitle>
+                    <CardTitle>{peerIdentity.name}</CardTitle>
                     <CardDescription className="capitalize">
-                      {selectedConv.participantRole}
+                      <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "border-transparent",
+                      connectionMeta[connectionState].className
+                    )}
+                  >
+                    {connectionMeta[connectionState].label}
+                  </Badge>
+                  {lastError && (
+                    <span className="flex items-center gap-1 text-xs text-destructive">
+                      <AlertCircle className="size-3" /> {lastError}
+                    </span>
+                  )}
+                </div>
                     </CardDescription>
                   </div>
                   <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-                    <span
-                      className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`}
-                    />
-                    <span>{connectionIndicator.label}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => reconnect()}
+                      disabled={!hasChatTarget}
+                    >
+                      <RefreshCw className="size-4" /> Reconnect
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => clearMessages()}
+                      disabled={!messages.length || !hasChatTarget}
+                    >
+                      Clear
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
                 {/* Messages */}
                 <div className="h-96 space-y-4 overflow-y-auto p-4">
-                  {conversationMessages.map((message) => {
-                    const isSent = message.senderId === currentUserId;
+                  {isLoadingInitial && (
+                    <div className="flex flex-1 items-center justify-center text-muted-foreground">
+                      <Loader2 className="mr-2 size-5 animate-spin" /> Preparing chat...
+                    </div>
+                  )}
+
+                  {!isLoadingInitial && !hasChatTarget && (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+                      <MessageCircle className="size-12" />
+                      <p className="text-sm">Select a designer to start chatting.</p>
+                    </div>
+                  )}
+
+                  {!isLoadingInitial && hasChatTarget && (
+                    <>
+                    {messages.length === 0 && historyLoaded && (
+                      <div className="text-muted-foreground text-sm">
+                        No messages yet. Say hello to get things started!
+                      </div>
+                    )}
+                    </>
+                  )}
+
+                  {messages.map((message) => {
+                    const status = message.status ? STATUS_LABEL[message.status] : undefined;
+                    const isOwnMessage = message.senderId === currentUserId;
                     return (
                       <div
                         key={message.id}
-                        className={`flex ${
-                          isSent ? "justify-end" : "justify-start"
-                        }`}
+                        className={cn(
+                          "flex w-full max-w-full gap-2",
+                          isOwnMessage ? "justify-end" : "justify-start"
+                        )}
                       >
+                        {!isOwnMessage && (
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={peerIdentity?.name} alt={peerIdentity?.name} />
+                            <AvatarFallback>
+                              {peerIdentity?.name?.charAt(0)?.toUpperCase() || "T"}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         <div
-                          className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                            isSent
-                              ? "bg-accent text-white"
-                              : "bg-secondary text-foreground"
-                          }`}
+                          className={cn(
+                            "max-w-[75%] space-y-1 break-words",
+                            isOwnMessage && "items-end text-right"
+                          )}
                         >
-                          <p className="text-sm">{message.content}</p>
-                          <p
-                            className={`mt-1 text-xs ${
-                              isSent ? "text-white/70" : "text-muted-foreground"
-                            }`}
+                          <div
+                            className={cn(
+                              "rounded-lg px-3 py-2 text-sm text-left",
+                              isOwnMessage
+                                ? "bg-accent text-white"
+                                : "bg-secondary text-foreground",
+                              message.imageUrl && "p-2"
+                            )}
                           >
-                            {message.createdAt.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
+                            <div className="space-y-2">
+                              {message.imageUrl ? (
+                                <img
+                                  src={message.imageUrl}
+                                  alt="Sent attachment"
+                                  className="max-h-72 w-full rounded-md object-cover"
+                                />
+                              ) : null}
+                              {message.content ? (
+                                <p className="whitespace-pre-wrap break-words">
+                                  {message.content}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            {formatTimestamp(message.timestamp)}
+                            {isOwnMessage && status ? ` · ${status}` : null}
+                          </div>
                         </div>
+                        {isOwnMessage && (
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={chatIdentity?.name} alt={chatIdentity?.name} />
+                            <AvatarFallback>
+                              {chatIdentity?.name?.charAt(0)?.toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                       </div>
                     );
                   })}
+                  <div ref={messageEndRef} />
                 </div>
 
                 {/* Message Input */}
-                <div className="border-t p-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Type your message..."
-                      value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={!messageInput.trim()}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
+                <form onSubmit={handleSend} className="border-t bg-card px-6 pt-4">
+                  <div className="flex flex-col gap-3">
+                    {attachmentUrl ? (
+                      <div className="flex items-center gap-3 rounded-md border p-2">
+                        <img
+                          src={attachmentUrl}
+                          alt="Attachment preview"
+                          className="h-16 w-16 rounded-md object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveAttachment}
+                        >
+                          <XCircle className="mr-2 size-4" />
+                          Remove
+                        </Button>
+                      </div>
+                    ) : null}
+                    <div className="flex items-end gap-2">
+                      <Textarea
+                        placeholder="Type your message..."
+                        value={draft} 
+                        onChange={(event) => setDraft(event.target.value)}
+                        onKeyDown={handleKeyDown}
+                        disabled={!hasChatTarget}
+                        rows={2}
+                        className="resize-none"
+                      />
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleAttachmentClick}
+                          disabled={!hasChatTarget || isUploadingAttachment}
+                        >
+                          {isUploadingAttachment ? (
+                            <>
+                              <Loader2 className="mr-2 size-4 animate-spin" />
+                              Uploading
+                            </>
+                          ) : (
+                            <>
+                              <ImagePlus className="mr-2 size-4" />
+                              Image
+                            </>
+                          )}
+                        </Button>
+                        <Button type="submit" disabled={!canSubmit}>
+                          <Send className="size-4" />
+                          Send
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAttachmentChange}
+                    className="hidden"
+                  />
+                </form>
               </CardContent>
             </>
           ) : (

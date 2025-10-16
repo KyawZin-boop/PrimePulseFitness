@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,332 +7,630 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Send, Search, User } from "lucide-react";
+import { AlertCircle, ImagePlus, Loader2, MessageCircle, RefreshCw, Send, User, XCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import useAuth from "@/hooks/useAuth";
+import api from "@/api";
+import { useSearchParams } from "react-router-dom";
+import { useChat } from "@/hooks/useChat";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { set } from "react-hook-form";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-interface Message {
-  id: string;
-  senderId: string;
-  senderName: string;
-  content: string;
-  timestamp: Date;
-  isTrainer: boolean;
+const STATUS_LABEL: Record<NonNullable<ChatMessage["status"]>, string> = {
+  pending: "Pending",
+  sent: "Sent",
+  delivered: "Delivered",
+  read: "Read",
+  error: "Failed",
+};
+
+const connectionMeta: Record<ChatConnectionState, { label: string; className: string }> = {
+  idle: { label: "Idle", className: "bg-muted text-muted-foreground" },
+  connecting: { label: "Connecting", className: "bg-amber-100 text-amber-700" },
+  open: { label: "Connected", className: "bg-emerald-100 text-emerald-700" },
+  closing: { label: "Closing", className: "bg-amber-200 text-amber-800" },
+  closed: { label: "Disconnected", className: "bg-gray-200 text-gray-700" },
+  error: { label: "Error", className: "bg-destructive/10 text-destructive" },
+};
+
+const buildConversationId = (first: string, second: string) => {
+  const [a, b] = [first, second].sort((x, y) => x.localeCompare(y));
+  return `conversation:${a}:${b}`;
+};
+
+const parseTimestamp = (timestamp: string) => {
+  if (!timestamp) {
+    return null;
+  }
+
+  const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(timestamp);
+  const normalized = hasTimezone ? timestamp : `${timestamp}Z`;
+  const date = new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+};
+
+const formatTimestamp = (timestamp: string) => {
+  const date = parseTimestamp(timestamp);
+  if (!date) {
+    return "Unknown time";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  }).format(date);
+};
+
+interface Client {
+  userID: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
-interface Conversation {
-  id: string;
-  clientId: string;
-  clientName: string;
-  clientPhoto?: string;
-  lastMessage: string;
-  lastMessageTime: Date;
-  unreadCount: number;
-  messages: Message[];
-}
+const filterClients = (clients: Client[] | undefined, term: string) => {
+  if (!clients) {
+    return [];
+  }
+
+  const trimmed = term.trim().toLowerCase();
+  if (!trimmed) {
+    return clients;
+  }
+
+  return clients.filter((client) => {
+    return (
+      client.name?.toLowerCase().includes(trimmed) ||
+      client.email?.toLowerCase().includes(trimmed)
+    );
+  });
+};
 
 const TrainerMessagesView = () => {
-  const [conversations, setConversations] = useState<Conversation[]>([
-    {
-      id: "1",
-      clientId: "1",
-      clientName: "Alex Johnson",
-      clientPhoto: "https://i.pravatar.cc/150?img=1",
-      lastMessage: "Thanks for the workout tips!",
-      lastMessageTime: new Date("2025-05-22T14:30:00"),
-      unreadCount: 2,
-      messages: [
-        {
-          id: "m1",
-          senderId: "trainer",
-          senderName: "You",
-          content: "Great session today! Keep up the excellent work.",
-          timestamp: new Date("2025-05-22T10:00:00"),
-          isTrainer: true,
-        },
-        {
-          id: "m2",
-          senderId: "1",
-          senderName: "Alex Johnson",
-          content: "Thanks! I'm feeling much stronger already.",
-          timestamp: new Date("2025-05-22T10:15:00"),
-          isTrainer: false,
-        },
-        {
-          id: "m3",
-          senderId: "trainer",
-          senderName: "You",
-          content:
-            "Excellent! For next session, we'll focus on increasing weight.",
-          timestamp: new Date("2025-05-22T11:00:00"),
-          isTrainer: true,
-        },
-        {
-          id: "m4",
-          senderId: "1",
-          senderName: "Alex Johnson",
-          content: "Thanks for the workout tips!",
-          timestamp: new Date("2025-05-22T14:30:00"),
-          isTrainer: false,
-        },
-      ],
-    },
-    {
-      id: "2",
-      clientId: "2",
-      clientName: "Sarah Williams",
-      clientPhoto: "https://i.pravatar.cc/150?img=5",
-      lastMessage: "Can we reschedule tomorrow's session?",
-      lastMessageTime: new Date("2025-05-22T09:00:00"),
-      unreadCount: 1,
-      messages: [
-        {
-          id: "m5",
-          senderId: "2",
-          senderName: "Sarah Williams",
-          content: "Can we reschedule tomorrow's session?",
-          timestamp: new Date("2025-05-22T09:00:00"),
-          isTrainer: false,
-        },
-      ],
-    },
-    {
-      id: "3",
-      clientId: "3",
-      clientName: "Mike Chen",
-      clientPhoto: "https://i.pravatar.cc/150?img=12",
-      lastMessage: "See you tomorrow at 10 AM!",
-      lastMessageTime: new Date("2025-05-21T18:00:00"),
-      unreadCount: 0,
-      messages: [
-        {
-          id: "m6",
-          senderId: "trainer",
-          senderName: "You",
-          content: "Your next session is scheduled for tomorrow at 10 AM.",
-          timestamp: new Date("2025-05-21T17:00:00"),
-          isTrainer: true,
-        },
-        {
-          id: "m7",
-          senderId: "3",
-          senderName: "Mike Chen",
-          content: "See you tomorrow at 10 AM!",
-          timestamp: new Date("2025-05-21T18:00:00"),
-          isTrainer: false,
-        },
-      ],
-    },
-  ]);
-
-  const [selectedConversation, setSelectedConversation] =
-    useState<Conversation | null>(conversations[0]);
-  const [newMessage, setNewMessage] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedConversation) return;
-
-    const message: Message = {
-      id: `m-${Date.now()}`,
-      senderId: "trainer",
-      senderName: "You",
-      content: newMessage,
-      timestamp: new Date(),
-      isTrainer: true,
-    };
-
-    setConversations(
-      conversations.map((conv) =>
-        conv.id === selectedConversation.id
-          ? {
-              ...conv,
-              messages: [...conv.messages, message],
-              lastMessage: newMessage,
-              lastMessageTime: new Date(),
-            }
-          : conv
-      )
-    );
-
-    setSelectedConversation({
-      ...selectedConversation,
-      messages: [...selectedConversation.messages, message],
-    });
-
-    setNewMessage("");
-    toast.success("Message sent!");
-  };
-
-  const filteredConversations = conversations.filter((conv) =>
-    conv.clientName.toLowerCase().includes(searchQuery.toLowerCase())
+  const { userCredentials: currentUser } = useAuth();
+  const currentUserId = useMemo(
+    () => currentUser?.userId ?? "",
+    [currentUser]
   );
 
+  // TODO: Replace with actual trainer clients endpoint
+  // For now, using empty array - backend needs to provide api.trainer.getMyClients()
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [isClientsError, setIsClientsError] = useState(false);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const clientIdFromQuery = searchParams.get("client");
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeClientId, setActiveClientId] = useState<string | null>(clientIdFromQuery);
+  const [draft, setDraft] = useState("");
+  const [attachmentUrl, setAttachmentUrl] = useState<string>("");
+
+  const messageEndRef = useRef<HTMLDivElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+
+  const { data: response } = api.user.getAllUsers.useQuery();
+  // Load clients on mount
+  useEffect(() => {
+    if (response) {
+      setClients(response);
+      return;
+    }
+  }, [response]);
+
+   useEffect(() => {
+    if (!clients?.length) {
+      return;
+    }
+
+    if (clientIdFromQuery && clients.some((client) => client.userID === clientIdFromQuery)) {
+      setActiveClientId(clientIdFromQuery);
+      return;
+    }
+
+    setActiveClientId((prev) => {
+      if (prev && clients.some((client) => client.userID === prev)) {
+        return prev;
+      }
+      return clients[0]?.userID ?? null;
+    });
+  }, [clients, clientIdFromQuery]);
+
+  useEffect(() => {
+    if (!activeClientId) {
+      if (clientIdFromQuery) {
+        setSearchParams({}, { replace: true });
+      }
+      return;
+    }
+
+    if (clientIdFromQuery !== activeClientId) {
+      setSearchParams({ client: activeClientId }, { replace: true });
+    }
+  }, [activeClientId, clientIdFromQuery, setSearchParams]);
+
+  const filteredClients = useMemo(
+    () => filterClients(clients, searchTerm),
+    [clients, searchTerm]
+  );
+
+  const activeClient = clients?.find((client) => client.userID === activeClientId) ?? null;
+
+  const chatIdentity = currentUser
+    ? { id: currentUser.userId, name: currentUser.name, email: currentUser.email }
+    : null;
+  const peerIdentity = activeClient
+    ? { id: activeClient.userID, name: activeClient.name, email: activeClient.email }
+    : null;
+
+  const conversationId = chatIdentity && peerIdentity
+    ? buildConversationId(chatIdentity.id, peerIdentity.id)
+    : undefined;
+
+  const loadHistory = useCallback(async () => {
+    if (!conversationId || !chatIdentity?.id || !peerIdentity?.id) {
+      return [];
+    }
+
+    try {
+      const history = await api.chat.getChatHistory({
+        userId: chatIdentity.id,
+        trainerId: peerIdentity.id,
+      });
+
+      return history
+        .map((item) => api.chat.mapHistoryItemToChatMessage(item, buildConversationId))
+        .filter((item): item is ChatMessage => !!item && item.conversationId === conversationId);
+    } catch (error) {
+      console.error("Failed to fetch chat history", error);
+      throw error;
+    }
+  }, [chatIdentity?.id, conversationId, peerIdentity?.id]);
+
+  const {
+    connectionState,
+    messages,
+    sendMessage,
+    lastError,
+    reconnect,
+    clearMessages,
+    isHistoryLoading,
+    historyLoaded,
+  } = useChat({
+    conversationId,
+    currentUser: chatIdentity ?? undefined,
+    peer: peerIdentity ?? undefined,
+    loadHistory,
+  });
+
+  const isLoadingInitial = isLoadingClients || isHistoryLoading;
+  const hasChatTarget = !!chatIdentity && !!peerIdentity;
+
+  useEffect(() => {
+    if (messageEndRef.current) {
+      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, activeClientId]);
+
+  useEffect(() => {
+    setAttachmentUrl("");
+  }, [conversationId]);
+
+  const {
+    mutate: uploadAttachment,
+    isPending: isUploadingAttachment,
+  } = api.files.uploadFile.useMutation({
+    onMutate: () => {
+      setAttachmentUrl("");
+    },
+    onSuccess: (url) => {
+      setAttachmentUrl(url);
+      toast.success("Image attached");
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to upload image. Please try again.";
+      toast.error(message);
+    },
+  });
+
+  const canSubmit =
+    hasChatTarget &&
+    !isUploadingAttachment &&
+    !isLoadingInitial &&
+    (!!draft.trim() || !!attachmentUrl);
+
+  const handleAttachmentClick = () => {
+    if (!hasChatTarget || isUploadingAttachment) {
+      return;
+    }
+
+    attachmentInputRef.current?.click();
+  };
+
+  const handleAttachmentChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      uploadAttachment(file);
+      event.target.value = "";
+    },
+    [uploadAttachment]
+  );
+
+  const handleRemoveAttachment = () => {
+    setAttachmentUrl("");
+  };
+
+  const handleSend = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (isUploadingAttachment || !hasChatTarget) {
+      return;
+    }
+
+    const trimmed = draft.trim();
+    const imageUrl = attachmentUrl || null;
+    if (!trimmed && !imageUrl) {
+      return;
+    }
+
+    const result = sendMessage(trimmed, { imageUrl });
+    if (result) {
+      setDraft("");
+      setAttachmentUrl("");
+    }
+  };
+
+  const connectionIndicator = useMemo(() => {
+    switch (connectionState) {
+      case "open":
+        return { label: "Connected", dotClass: "bg-emerald-500" };
+      case "connecting":
+        return { label: "Connecting…", dotClass: "bg-amber-500" };
+      default:
+        return { label: "Disconnected", dotClass: "bg-rose-500" };
+    }
+  }, [connectionState]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (isUploadingAttachment || !hasChatTarget) {
+      return;
+    }
+
+    const trimmed = draft.trim();
+    const imageUrl = attachmentUrl || null;
+    if (!trimmed && !imageUrl) {
+      return;
+    }
+
+    const result = sendMessage(trimmed, { imageUrl });
+    if (result) {
+      setDraft("");
+      setAttachmentUrl("");
+    }
+  };
+
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-heading mb-2">Messages</h1>
-        <p className="text-muted-foreground">
-          Communicate with your clients in real-time
-        </p>
-      </div>
+    <div className="container flex justify-center items-center py-8 px-4 h-screen">
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-250px)]">
-        {/* Conversations List */}
-        <Card className="shadow-card md:col-span-1 overflow-hidden flex flex-col">
+      <div className="grid gap-6 lg:grid-cols-[350px_1fr] flex-1">
+        {/* Clients List */}
+        <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>Conversations</CardTitle>
-            <div className="relative mt-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search clients..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-accent" />
+              Clients
+            </CardTitle>
+            <CardDescription>Your chats with clients</CardDescription>
+            <Input
+              placeholder="Search clients..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mt-4"
+            />
           </CardHeader>
+          <CardContent className="space-y-2">
+            {isLoadingClients && (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="flex items-center gap-3 rounded-md border p-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {!isLoadingClients && !isClientsError && filteredClients.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground">
+                No clients match that search.
+              </p>
+            )}
 
-          <CardContent className="flex-1 overflow-y-auto p-0">
-            <div className="space-y-1 p-4 pt-0">
-              {filteredConversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => setSelectedConversation(conv)}
-                  className={`w-full text-left rounded-lg p-3 transition hover:bg-secondary ${
-                    selectedConversation?.id === conv.id ? "bg-secondary" : ""
+             {!isLoadingClients && !isClientsError && filteredClients.length > 0 && (
+              filteredClients.map((conv) => (
+                <div
+                  key={conv.userID}
+                  onClick={() => setActiveClientId(conv.userID)}
+                  className={`cursor-pointer rounded-lg border p-3 transition hover:shadow-md ${
+                    activeClientId === conv.userID
+                      ? "border-accent bg-accent/5"
+                      : "bg-card"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                      {conv.clientPhoto ? (
-                        <img
-                          src={conv.clientPhoto}
-                          alt={conv.clientName}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <User className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-1">
-                        <div className="font-semibold truncate">
-                          {conv.clientName}
-                        </div>
-                        {conv.unreadCount > 0 && (
-                          <div className="flex-shrink-0 ml-2 h-5 w-5 rounded-full bg-accent flex items-center justify-center text-xs text-white font-bold">
-                            {conv.unreadCount}
-                          </div>
-                        )}
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                        <User className="h-5 w-5" />
                       </div>
-                      <div className="text-sm text-muted-foreground truncate">
-                        {conv.lastMessage}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {conv.lastMessageTime.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Messages Area */}
-        <Card className="shadow-card md:col-span-2 overflow-hidden flex flex-col">
-          {selectedConversation ? (
-            <>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                    {selectedConversation.clientPhoto ? (
-                      <img
-                        src={selectedConversation.clientPhoto}
-                        alt={selectedConversation.clientName}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <User className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <CardTitle>{selectedConversation.clientName}</CardTitle>
-                    <CardDescription>Active now</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-4">
-                  {selectedConversation.messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.isTrainer ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`max-w-[70%] rounded-lg p-3 ${
-                          message.isTrainer
-                            ? "bg-accent text-white"
-                            : "bg-secondary"
-                        }`}
-                      >
-                        <p className="text-sm">{message.content}</p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            message.isTrainer
-                              ? "text-white/70"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {message.timestamp.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                      <div>
+                        <h4 className="font-medium">{conv.name}</h4>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {conv.email}
                         </p>
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </CardContent>
+              ))
+            )}
+          </CardContent>
+        </Card>
 
-              <div className="p-4 border-t">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Type your message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                  />
-                  <Button onClick={handleSendMessage}>
-                    <Send className="h-4 w-4" />
-                  </Button>
+        {/* Message Thread */}
+        <Card className="shadow-card">
+          {peerIdentity ? (
+            <>
+              <CardHeader className="border-b">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <User className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle>{peerIdentity.name}</CardTitle>
+                    <CardDescription className="capitalize">
+                      <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "border-transparent",
+                      connectionMeta[connectionState].className
+                    )}
+                  >
+                    {connectionMeta[connectionState].label}
+                  </Badge>
+                  {lastError && (
+                    <span className="flex items-center gap-1 text-xs text-destructive">
+                      <AlertCircle className="size-3" /> {lastError}
+                    </span>
+                  )}
                 </div>
-              </div>
+                    </CardDescription>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => reconnect()}
+                      disabled={!hasChatTarget}
+                    >
+                      <RefreshCw className="size-4" /> Reconnect
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => clearMessages()}
+                      disabled={!messages.length || !hasChatTarget}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {/* Messages */}
+                <div className="h-96 space-y-4 overflow-y-auto p-4">
+                  {isLoadingInitial && (
+                    <div className="flex flex-1 items-center justify-center text-muted-foreground">
+                      <Loader2 className="mr-2 size-5 animate-spin" /> Preparing chat...
+                    </div>
+                  )}
+
+                  {!isLoadingInitial && !hasChatTarget && (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+                      <MessageCircle className="size-12" />
+                      <p className="text-sm">Select a designer to start chatting.</p>
+                    </div>
+                  )}
+
+                  {!isLoadingInitial && hasChatTarget && (
+                    <>
+                    {messages.length === 0 && historyLoaded && (
+                      <div className="text-muted-foreground text-sm">
+                        No messages yet. Say hello to get things started!
+                      </div>
+                    )}
+                    </>
+                  )}
+
+                  {messages.map((message) => {
+                    const status = message.status ? STATUS_LABEL[message.status] : undefined;
+                    const isOwnMessage = message.senderId === currentUserId;
+                    return (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          "flex w-full max-w-full gap-2",
+                          isOwnMessage ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        {!isOwnMessage && (
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={peerIdentity?.name} alt={peerIdentity?.name} />
+                            <AvatarFallback>
+                              {peerIdentity?.name?.charAt(0)?.toUpperCase() || "T"}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div
+                          className={cn(
+                            "max-w-[75%] space-y-1 break-words",
+                            isOwnMessage && "items-end text-right"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "rounded-lg px-3 py-2 text-sm text-left",
+                              isOwnMessage
+                                ? "bg-accent text-white"
+                                : "bg-secondary text-foreground",
+                              message.imageUrl && "p-2"
+                            )}
+                          >
+                            <div className="space-y-2">
+                              {message.imageUrl ? (
+                                <img
+                                  src={message.imageUrl}
+                                  alt="Sent attachment"
+                                  className="max-h-72 w-full rounded-md object-cover"
+                                />
+                              ) : null}
+                              {message.content ? (
+                                <p className="whitespace-pre-wrap break-words">
+                                  {message.content}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            {formatTimestamp(message.timestamp)}
+                            {isOwnMessage && status ? ` · ${status}` : null}
+                          </div>
+                        </div>
+                        {isOwnMessage && (
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={chatIdentity?.name} alt={chatIdentity?.name} />
+                            <AvatarFallback>
+                              {chatIdentity?.name?.charAt(0)?.toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div ref={messageEndRef} />
+                </div>
+
+                {/* Message Input */}
+                <form onSubmit={handleSend} className="border-t bg-card px-6 pt-4">
+                  <div className="flex flex-col gap-3">
+                    {attachmentUrl ? (
+                      <div className="flex items-center gap-3 rounded-md border p-2">
+                        <img
+                          src={attachmentUrl}
+                          alt="Attachment preview"
+                          className="h-16 w-16 rounded-md object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveAttachment}
+                        >
+                          <XCircle className="mr-2 size-4" />
+                          Remove
+                        </Button>
+                      </div>
+                    ) : null}
+                    <div className="flex items-end gap-2">
+                      <Textarea
+                        placeholder="Type your message..."
+                        value={draft} 
+                        onChange={(event) => setDraft(event.target.value)}
+                        onKeyDown={handleKeyDown}
+                        disabled={!hasChatTarget}
+                        rows={2}
+                        className="resize-none"
+                      />
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleAttachmentClick}
+                          disabled={!hasChatTarget || isUploadingAttachment}
+                        >
+                          {isUploadingAttachment ? (
+                            <>
+                              <Loader2 className="mr-2 size-4 animate-spin" />
+                              Uploading
+                            </>
+                          ) : (
+                            <>
+                              <ImagePlus className="mr-2 size-4" />
+                              Image
+                            </>
+                          )}
+                        </Button>
+                        <Button type="submit" disabled={!canSubmit}>
+                          <Send className="size-4" />
+                          Send
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAttachmentChange}
+                    className="hidden"
+                  />
+                </form>
+              </CardContent>
             </>
           ) : (
-            <CardContent className="flex flex-col items-center justify-center h-full">
-              <Send className="h-16 w-16 text-muted-foreground opacity-20 mb-4" />
-              <h3 className="font-semibold mb-2">No conversation selected</h3>
-              <p className="text-muted-foreground text-sm">
-                Select a client to start messaging
+            <div className="flex h-full min-h-96 flex-col items-center justify-center p-8 text-center">
+              <MessageCircle className="mb-4 h-16 w-16 text-muted-foreground opacity-20" />
+              <h3 className="mb-2 font-semibold">Select a conversation</h3>
+              <p className="text-sm text-muted-foreground">
+                Choose a trainer from the list to start chatting
               </p>
-            </CardContent>
+              <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                <span
+                  className={`h-2 w-2 rounded-full ${connectionIndicator.dotClass}`}
+                />
+                <span>{connectionIndicator.label}</span>
+              </div>
+            </div>
           )}
         </Card>
       </div>

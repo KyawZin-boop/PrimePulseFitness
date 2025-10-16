@@ -4,6 +4,10 @@ import * as classes from "./classes";
 import * as trainers from "./trainer";
 import * as categories from "./categories";
 import * as bookings from "./bookings";
+import * as files from "./files";
+import * as chat from "./chat";
+import * as user from "./user";
+
 class API {
   auth: typeof auth;
   products: typeof products;
@@ -11,7 +15,9 @@ class API {
   trainers: typeof trainers;
   categories: typeof categories;
   bookings: typeof bookings;
-  //   files: typeof files;
+  files: typeof files;
+  chat: typeof chat
+  user: typeof user;
 
   constructor() {
     this.auth = auth;
@@ -20,7 +26,9 @@ class API {
     this.trainers = trainers;
     this.categories = categories;
     this.bookings = bookings;
-    // this.files = files;
+    this.files = files;
+    this.chat = chat;
+    this.user = user;
   }
 }
 
