@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+// import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -31,7 +31,7 @@ const formSchema = z.object({
     .email({ message: "Please enter a valid email" })
     .nonempty("Email is required"),
   password: z.string().nonempty("Password is required"),
-  rememberMe: z.boolean().optional(),
+  // rememberMe: z.boolean().optional(),
 });
 
 const LoginView = () => {
@@ -43,7 +43,7 @@ const LoginView = () => {
     defaultValues: {
       email: "",
       password: "",
-      rememberMe: false,
+      // rememberMe: false,
     },
   });
 
@@ -141,7 +141,11 @@ const LoginView = () => {
                         Password
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Password" {...field} />
+                        <Input
+                          placeholder="Password"
+                          {...field}
+                          type="password"
+                        />
                       </FormControl>
                       <div className="h-[16px]">
                         <FormMessage className="text-xs" />
@@ -157,9 +161,9 @@ const LoginView = () => {
                   Submit
                 </Button>
 
-                <FormField
+                {/* <FormField
                   control={form.control}
-                  name="rememberMe"
+                  // name="rememberMe"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center gap-2">
                       <FormControl>
@@ -173,7 +177,7 @@ const LoginView = () => {
                       </FormLabel>
                     </FormItem>
                   )}
-                />
+                /> */}
               </form>
             </Form>
 

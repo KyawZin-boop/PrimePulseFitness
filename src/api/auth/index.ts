@@ -32,17 +32,13 @@ export const registerMutation = {
 };
 
 export const loginMutation = {
-  useMutation: (
-    opt?: Partial<UseMutationOptions<string, Error, UserLogin>>
-  ) => {
-    return useMutation<string, Error, UserLogin>({
-      mutationFn: async (payload) => {
-        const response: ApiResponse<string> = await axios
-          .post(`${BASE_URL}/Login`, payload)
-          .then((res) => res.data);
-        return response.data; // Assuming Data is the JWT token string
+  useMutation: (opt?: UseMutationOptions<string, Error, UserLogin, void>) =>
+    useMutation({
+      mutationKey: ["loginMutation"],
+      mutationFn: async (payload: UserLogin) => {
+        const response = await axios.post(`${BASE_URL}/Login`, payload);
+        return response.data.data;
       },
       ...opt,
-    });
-  },
+    }),
 };

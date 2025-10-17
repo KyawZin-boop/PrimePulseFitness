@@ -11,6 +11,9 @@ import BookingView from "@/modules/bookings/BookingView";
 import DietPlansView from "@/modules/diet/DietPlansView";
 import ProgressView from "@/modules/progress/ProgressView";
 import StoreView from "@/modules/store/StoreView";
+import CheckoutView from "@/modules/store/CheckoutView";
+import OrderHistory from "@/modules/user/OrderHistory";
+import OrderDetail from "@/modules/user/OrderDetail";
 import MessagesView from "@/modules/messages/MessagesView";
 import TrainersView from "@/modules/trainers/TrainersView";
 import LoginView from "@/modules/auth/Login/LoginView";
@@ -82,6 +85,18 @@ const Router = () => {
         {
           path: "shop",
           element: <StoreView />,
+        },
+        {
+          path: "orders",
+          element: <OrderHistory />,
+        },
+        {
+          path: "orders/:orderId",
+          element: <OrderDetail />,
+        },
+        {
+          path: "checkout",
+          element: <CheckoutView />,
         },
         {
           path: "messages",

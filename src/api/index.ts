@@ -7,6 +7,7 @@ import * as bookings from "./bookings";
 import * as files from "./files";
 import * as chat from "./chat";
 import * as user from "./user";
+import * as orders from "./orders";
 
 class API {
   auth: typeof auth;
@@ -16,8 +17,9 @@ class API {
   categories: typeof categories;
   bookings: typeof bookings;
   files: typeof files;
-  chat: typeof chat
+  chat: typeof chat;
   user: typeof user;
+  orders: typeof orders;
 
   constructor() {
     this.auth = auth;
@@ -29,6 +31,7 @@ class API {
     this.files = files;
     this.chat = chat;
     this.user = user;
+    this.orders = orders;
   }
 }
 

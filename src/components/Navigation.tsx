@@ -58,7 +58,7 @@ const Navigation = () => {
             <Button variant="ghost" size="icon">
               <ShoppingBag className="h-5 w-5" />
             </Button>
-            
+
             {!isAuthenticated ? (
               <NavLink to={"/auth/login"}>
                 <Button variant="hero" size="lg">
@@ -77,6 +77,9 @@ const Navigation = () => {
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuGroup>
                       <DropdownMenuItem>Profile</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/orders")}>
+                        Order History
+                      </DropdownMenuItem>
                       <DropdownMenuItem>Settings</DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />

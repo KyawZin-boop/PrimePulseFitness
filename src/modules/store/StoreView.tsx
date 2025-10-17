@@ -465,8 +465,8 @@ const StoreView = () => {
                   </Button>
                   <Button
                     onClick={() => {
-                      toast.success("Proceeding to checkout!");
                       setShowCart(false);
+                      navigate("/checkout");
                     }}
                     className="flex-1"
                   >
