@@ -39,11 +39,14 @@ export const getBookingsByUserId = {
 };
 
 export const getPendingBookingsByTrainerId = {
-  useQuery: (trainerId: string, opt?: UseQueryOptions<Booking[], Error>) =>
-    useQuery<Booking[], Error>({
+  useQuery: (
+    trainerId: string,
+    opt?: Partial<UseQueryOptions<TrainerPendingBooking[], Error>>
+  ) =>
+    useQuery<TrainerPendingBooking[], Error>({
       queryKey: ["getPendingBookingsByTrainerId", trainerId],
       queryFn: async () => {
-        const response: ApiResponse<Booking[]> = await axios
+        const response: ApiResponse<TrainerPendingBooking[]> = await axios
           .get(
             `${BASE_URL}/GetPendingBookingsByTrainerId?trainerId=${trainerId}`
           )

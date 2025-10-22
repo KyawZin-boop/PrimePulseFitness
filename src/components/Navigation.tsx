@@ -14,11 +14,18 @@ import useAuth from "@/hooks/useAuth";
 import { NavLink, useNavigate } from "react-router-dom";
 import { googleLogout } from "@react-oauth/google";
 import { userNavItems } from "@/constants";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/store";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { isAuthenticated, userLogout } = useAuth();
+  const { totalItems } = useSelector((state: RootState) => state.cart);
+
+  const handleCartClick = () => {
+    navigate("/shop/cart");
+  };
 
   const handleLogout = () => {
     userLogout();
@@ -55,8 +62,13 @@ const Navigation = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4 justify-end">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="relative" onClick={handleCartClick}>
               <ShoppingBag className="h-5 w-5" />
+              {totalItems > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
+                  {totalItems}
+                </span>
+              )}
             </Button>
 
             {!isAuthenticated ? (
@@ -123,8 +135,21 @@ const Navigation = () => {
                 </NavLink>
               ))}
               <div className="flex items-center space-x-4 pt-4">
-                <Button variant="ghost" size="icon">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative"
+                  onClick={() => {
+                    handleCartClick();
+                    setIsOpen(false);
+                  }}
+                >
                   <ShoppingBag className="h-5 w-5" />
+                  {totalItems > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
+                      {totalItems}
+                    </span>
+                  )}
                 </Button>
                 {!isAuthenticated ? (
                   <NavLink to={"/auth/login"} onClick={() => setIsOpen(false)}>

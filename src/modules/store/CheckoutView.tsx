@@ -178,6 +178,7 @@ const CheckoutView: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline_athletic"
+                          type="button"
                           onClick={onEditReceipt}
                         >
                           Edit

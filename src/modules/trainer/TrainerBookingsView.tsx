@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -7,85 +7,127 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Check, X, Clock, User, Calendar } from "lucide-react";
+import { Check, Clock, Loader2, User, X } from "lucide-react";
 import { toast } from "sonner";
+import useAuth from "@/hooks/useAuth";
+import { getPendingBookingsByTrainerId } from "@/api/bookings";
+import api from "@/api";
 
-interface BookingRequest {
-  id: string;
-  clientName: string;
-  clientEmail: string;
-  clientPhoto?: string;
-  sessionType: string;
-  preferredDate: Date;
-  preferredTime: string;
-  duration: number;
-  message?: string;
-  status: "pending" | "approved" | "rejected";
-  requestedAt: Date;
-}
+type BookingStatus = "pending" | "approved" | "rejected";
+
+type TrainerBookingRequest = TrainerPendingBooking & {
+  status: BookingStatus;
+};
+
+const normalizeStatus = (status: string): BookingStatus => {
+  const normalized = status?.toLowerCase();
+  if (normalized === "approved" || normalized === "rejected") {
+    return normalized;
+  }
+  return "pending";
+};
+
+const formatClientDetails = (age: number | null, gender: string | null) => {
+  const details: string[] = [];
+  if (typeof age === "number" && age > 0) {
+    details.push(`${age} yrs`);
+  }
+  if (gender) {
+    details.push(gender);
+  }
+  return details.length > 0 ? details.join(" • ") : "Not provided";
+};
 
 const TrainerBookingsView = () => {
-  const [bookings, setBookings] = useState<BookingRequest[]>([
-    {
-      id: "1",
-      clientName: "Emma Davis",
-      clientEmail: "emma.davis@example.com",
-      clientPhoto: "https://i.pravatar.cc/150?img=9",
-      sessionType: "Personal Training",
-      preferredDate: new Date("2025-05-25"),
-      preferredTime: "10:00 AM",
-      duration: 60,
-      message: "I'd like to focus on strength training and proper form.",
-      status: "pending",
-      requestedAt: new Date("2025-05-20"),
-    },
-    {
-      id: "2",
-      clientName: "James Wilson",
-      clientEmail: "james.w@example.com",
-      clientPhoto: "https://i.pravatar.cc/150?img=8",
-      sessionType: "Nutrition Consultation",
-      preferredDate: new Date("2025-05-26"),
-      preferredTime: "2:00 PM",
-      duration: 45,
-      message: "Need help creating a meal plan for muscle gain.",
-      status: "pending",
-      requestedAt: new Date("2025-05-21"),
-    },
-    {
-      id: "3",
-      clientName: "Olivia Martinez",
-      clientEmail: "olivia.m@example.com",
-      clientPhoto: "https://i.pravatar.cc/150?img=16",
-      sessionType: "Assessment Session",
-      preferredDate: new Date("2025-05-27"),
-      preferredTime: "4:00 PM",
-      duration: 90,
-      status: "pending",
-      requestedAt: new Date("2025-05-22"),
-    },
-  ]);
+  const { userCredentials } = useAuth();
+  const userId = userCredentials?.userId ?? "";
 
-  const handleApprove = (bookingId: string) => {
-    setBookings(
-      bookings.map((b) =>
-        b.id === bookingId ? { ...b, status: "approved" as const } : b
-      )
-    );
-    toast.success("Booking request approved!");
+  const { data: trainer } = api.trainers.getTrainerData.useQuery(userId, {
+    enabled: Boolean(userId),
+  });
+  const trainerId = trainer?.trainerID ?? "";
+
+  const bookingsQuery = getPendingBookingsByTrainerId.useQuery(trainerId, {
+    enabled: Boolean(trainerId),
+  });
+
+  const [bookings, setBookings] = useState<TrainerBookingRequest[]>([]);
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const updateStatusMutation = api.trainers.updateBookingStatus.useMutation();
+
+  const toApiStatus = (status: BookingStatus) => {
+    switch (status) {
+      case "approved":
+        return "Approved";
+      case "rejected":
+        return "Rejected";
+      default:
+        return "Pending";
+    }
   };
 
-  const handleReject = (bookingId: string) => {
-    setBookings(
-      bookings.map((b) =>
-        b.id === bookingId ? { ...b, status: "rejected" as const } : b
-      )
-    );
-    toast.error("Booking request rejected");
+  useEffect(() => {
+    if (bookingsQuery.data) {
+      setBookings(
+        bookingsQuery.data.map((booking) => ({
+          ...booking,
+          status: normalizeStatus(booking.status),
+        }))
+      );
+    }
+  }, [bookingsQuery.data]);
+
+  const handleStatusChange = async (
+    bookingId: string,
+    status: BookingStatus
+  ) => {
+    setPendingActionId(bookingId);
+    try {
+      const apiStatus = toApiStatus(status);
+      await updateStatusMutation.mutateAsync({ bookingId, status: apiStatus });
+
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.bookingID === bookingId
+            ? { ...booking, status }
+            : booking
+        )
+      );
+
+      if (status === "approved") {
+        toast.success("Booking request approved!");
+      } else if (status === "rejected") {
+        toast.error("Booking request rejected");
+      }
+
+      await bookingsQuery.refetch();
+    } catch (error) {
+      toast.error("Failed to update booking status. Please try again.");
+    } finally {
+      setPendingActionId(null);
+    }
   };
 
-  const pendingBookings = bookings.filter((b) => b.status === "pending");
-  const processedBookings = bookings.filter((b) => b.status !== "pending");
+  const handleApprove = (bookingId: string) => handleStatusChange(bookingId, "approved");
+  const handleReject = (bookingId: string) => handleStatusChange(bookingId, "rejected");
+
+  const pendingBookings = bookings.filter((booking) => booking.status === "pending");
+  const processedBookings = bookings.filter((booking) => booking.status !== "pending");
+
+  if (!trainerId) {
+    return (
+      <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
+        <Card className="max-w-md shadow-card">
+          <CardContent className="py-10 text-center">
+            <h2 className="text-lg font-semibold">Trainer account required</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Sign in with a trainer account to view booking requests.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -96,38 +138,42 @@ const TrainerBookingsView = () => {
         </p>
       </div>
 
-      {/* Pending Requests */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
           <Clock className="h-5 w-5 text-accent" />
           Pending Requests ({pendingBookings.length})
         </h2>
 
-        {pendingBookings.length > 0 ? (
+        {bookingsQuery.isLoading && bookings.length === 0 ? (
+          <Card className="shadow-card">
+            <CardContent className="flex flex-col items-center justify-center gap-2 py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Loading pending bookings…</p>
+            </CardContent>
+          </Card>
+        ) : bookingsQuery.isError ? (
+          <Card className="shadow-card">
+            <CardContent className="py-12 text-center text-destructive">
+              Failed to load pending bookings.
+            </CardContent>
+          </Card>
+        ) : pendingBookings.length > 0 ? (
           <div className="space-y-4">
             {pendingBookings.map((booking) => (
-              <Card key={booking.id} className="shadow-card">
+              <Card key={booking.bookingID} className="shadow-card">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 flex-1">
+                    <div className="flex flex-1 items-start gap-3">
                       <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                        {booking.clientPhoto ? (
-                          <img
-                            src={booking.clientPhoto}
-                            alt={booking.clientName}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center">
-                            <User className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                        )}
+                        <div className="flex h-full w-full items-center justify-center">
+                          <User className="h-6 w-6 text-muted-foreground" />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <CardTitle>{booking.clientName}</CardTitle>
-                        <CardDescription>{booking.clientEmail}</CardDescription>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Requested {booking.requestedAt.toLocaleDateString()}
+                      <div className="min-w-0 flex-1">
+                        <CardTitle>{booking.userName}</CardTitle>
+                        <CardDescription>{booking.email}</CardDescription>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Class: {booking.className}
                         </p>
                       </div>
                     </div>
@@ -135,18 +181,36 @@ const TrainerBookingsView = () => {
                       <Button
                         size="sm"
                         variant="default"
-                        onClick={() => handleApprove(booking.id)}
+                        onClick={() => handleApprove(booking.bookingID)}
+                        disabled={
+                          updateStatusMutation.isPending &&
+                          pendingActionId === booking.bookingID
+                        }
                         className="bg-green-600 hover:bg-green-700"
                       >
-                        <Check className="h-4 w-4 mr-1" />
+                        {updateStatusMutation.isPending &&
+                        pendingActionId === booking.bookingID ? (
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="mr-1 h-4 w-4" />
+                        )}
                         Approve
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleReject(booking.id)}
+                        onClick={() => handleReject(booking.bookingID)}
+                        disabled={
+                          updateStatusMutation.isPending &&
+                          pendingActionId === booking.bookingID
+                        }
                       >
-                        <X className="h-4 w-4 mr-1" />
+                        {updateStatusMutation.isPending &&
+                        pendingActionId === booking.bookingID ? (
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        ) : (
+                          <X className="mr-1 h-4 w-4" />
+                        )}
                         Reject
                       </Button>
                     </div>
@@ -154,45 +218,28 @@ const TrainerBookingsView = () => {
                 </CardHeader>
 
                 <CardContent>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
+                  <div className="mb-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <div className="rounded-lg bg-secondary/50 p-3">
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Session Type
-                      </div>
-                      <div className="font-semibold">{booking.sessionType}</div>
+                      <div className="mb-1 text-xs text-muted-foreground">Schedule</div>
+                      <div className="font-semibold">{booking.time}</div>
                     </div>
                     <div className="rounded-lg bg-secondary/50 p-3">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                        <Calendar className="h-3 w-3" />
-                        Preferred Date
-                      </div>
-                      <div className="font-semibold">
-                        {booking.preferredDate.toLocaleDateString()}
-                      </div>
-                    </div>
-                    <div className="rounded-lg bg-secondary/50 p-3">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                        <Clock className="h-3 w-3" />
-                        Preferred Time
-                      </div>
-                      <div className="font-semibold">{booking.preferredTime}</div>
-                    </div>
-                    <div className="rounded-lg bg-secondary/50 p-3">
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Duration
-                      </div>
+                      <div className="mb-1 text-xs text-muted-foreground">Duration</div>
                       <div className="font-semibold">{booking.duration} minutes</div>
                     </div>
-                  </div>
-
-                  {booking.message && (
-                    <div className="rounded-lg border bg-gradient-card p-3">
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Client Message
+                    <div className="rounded-lg bg-secondary/50 p-3">
+                      <div className="mb-1 text-xs text-muted-foreground">Capacity</div>
+                      <div className="font-semibold">
+                        {booking.assignedCount}/{booking.capacity} assigned
                       </div>
-                      <p className="text-sm">{booking.message}</p>
                     </div>
-                  )}
+                    <div className="rounded-lg bg-secondary/50 p-3">
+                      <div className="mb-1 text-xs text-muted-foreground">Client details</div>
+                      <div className="font-semibold">
+                        {formatClientDetails(booking.age, booking.gender)}
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -200,9 +247,9 @@ const TrainerBookingsView = () => {
         ) : (
           <Card className="shadow-card">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <Clock className="h-12 w-12 text-muted-foreground opacity-20 mb-3" />
-              <h3 className="font-semibold mb-1">No Pending Requests</h3>
-              <p className="text-muted-foreground text-sm">
+              <Clock className="mb-3 h-12 w-12 text-muted-foreground opacity-20" />
+              <h3 className="mb-1 font-semibold">No Pending Requests</h3>
+              <p className="text-sm text-muted-foreground">
                 All booking requests have been processed
               </p>
             </CardContent>
@@ -210,35 +257,26 @@ const TrainerBookingsView = () => {
         )}
       </div>
 
-      {/* Processed Requests */}
       {processedBookings.length > 0 && (
         <div>
-          <h2 className="text-xl font-bold mb-4">
+          <h2 className="mb-4 text-xl font-bold">
             Recently Processed ({processedBookings.length})
           </h2>
           <div className="space-y-3">
             {processedBookings.map((booking) => (
-              <Card key={booking.id} className="shadow-card opacity-60">
+              <Card key={booking.bookingID} className="shadow-card opacity-60">
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex flex-1 items-center gap-3">
                       <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                        {booking.clientPhoto ? (
-                          <img
-                            src={booking.clientPhoto}
-                            alt={booking.clientName}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center">
-                            <User className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        )}
+                        <div className="flex h-full w-full items-center justify-center">
+                          <User className="h-5 w-5 text-muted-foreground" />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold">{booking.clientName}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold">{booking.userName}</div>
                         <div className="text-sm text-muted-foreground">
-                          {booking.sessionType} • {booking.preferredDate.toLocaleDateString()} at {booking.preferredTime}
+                          {booking.className} • {booking.time}
                         </div>
                       </div>
                     </div>

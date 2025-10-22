@@ -57,7 +57,7 @@ const OrderHistory: React.FC = () => {
                       <Calendar className="w-4 h-4" />
                       {new Date(
                         order.createdAt || Date.now()
-                      ).toLocaleDateString()}
+                      ).toUTCString().slice(0, 16)}
                     </span>
                     <span className="flex items-center gap-1">
                       <DollarSign className="w-4 h-4" />

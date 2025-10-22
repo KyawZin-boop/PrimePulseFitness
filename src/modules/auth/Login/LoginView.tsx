@@ -24,6 +24,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import bgPhoto from "@/assets/bg3.png";
+import { Dumbbell } from "lucide-react";
 
 const formSchema = z.object({
   email: z
@@ -78,18 +80,24 @@ const LoginView = () => {
   }
 
   return (
-    <div className="w-full h-full flex justify-center items-center bg-primary">
+    <div className="w-full h-full flex justify-center items-center"
+    style={{
+        backgroundImage: `url('${bgPhoto}')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}>
       <div className="w-full max-w-md relative z-10">
-        <Card className="shadow-athletic bg-gradient-card border-0 backdrop-blur-sm">
+        <Card className=" bg-white/15 backdrop-blur-xl border-white/30 shadow-2xl rounded-xl">
           <CardHeader className="text-center space-y-6 pb-8">
-            <div className="mx-auto w-16 h-16 bg-gradient-accent rounded-2xl flex items-center justify-center shadow-accent">
-              <div className="w-8 h-8 bg-accent-foreground rounded-lg"></div>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/20">
+              <Dumbbell className="h-8 w-8 text-accent" />
             </div>
             <div className="space-y-2">
-              <CardTitle className="text-heading text-foreground">
+              <CardTitle className="text-heading text-white">
                 Welcome Back
               </CardTitle>
-              <CardDescription className="text-muted-foreground text-base">
+              <CardDescription className="text-muted-white text-base">
                 Transform your fitness journey with us
               </CardDescription>
             </div>
@@ -107,7 +115,7 @@ const LoginView = () => {
           <CardContent className="pt-0">
             <div className="w-full flex items-center gap-4">
               <span className="flex-1 h-px bg-gray-300"></span>
-              <p className="text-gray-500">Or</p>
+              <p className="text-white">Or</p>
               <span className="flex-1 h-px bg-gray-300"></span>
             </div>
             <Form {...form}>
@@ -190,7 +198,7 @@ const LoginView = () => {
             <div className="w-full flex items-center justify-center gap-1 mt-4">
               <span>Don't have an account?</span>
               <span
-                className="text-primary underline hover:text-primary/80 cursor-pointer"
+                className="text-accent underline hover:text-accent/80 cursor-pointer"
                 onClick={() => navigate("/auth/register")}
               >
                 Sign up here

@@ -16,6 +16,32 @@ const OrderDetail: React.FC = () => {
 
   const order = orderQuery.data;
 
+  const formatPlacedDate = (value?: string | null) => {
+    const normalizedValue = (() => {
+      if (!value) {
+        return undefined;
+      }
+
+      const hasTimeZone = /[zZ]|([+-]\d{2}:?\d{2})$/.test(value);
+      return hasTimeZone ? value : `${value}Z`;
+    })();
+
+    const parsed = normalizedValue ? new Date(normalizedValue) : new Date();
+
+    if (Number.isNaN(parsed.getTime())) {
+      return "-";
+    }
+
+    return parsed.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   return (
     <div className="container mx-auto pt-20 pb-8 px-4">
       <div className="mb-6 flex items-center justify-between">
@@ -46,7 +72,7 @@ const OrderDetail: React.FC = () => {
                 <div>
                   <div className="text-sm text-muted-foreground">Placed</div>
                   <div className="font-medium">
-                    {new Date(order.createdAt || Date.now()).toLocaleString()}
+                    {formatPlacedDate(order.createdAt)}
                   </div>
                 </div>
                 <div>

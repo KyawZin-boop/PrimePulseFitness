@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Dumbbell, Loader } from "lucide-react";
 import api from "@/api";
 import useAuth from "@/hooks/useAuth";
+import bgPhoto from "@/assets/bg3.png";
 
 const RegisterView = () => {
   const navigate = useNavigate();
@@ -87,14 +88,20 @@ const RegisterView = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4">
-      <Card className="w-full max-w-2xl shadow-athletic">
+    <div className="flex min-h-screen items-center justify-center p-4"
+    style={{
+        backgroundImage: `url('${bgPhoto}')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}>
+      <Card className="w-full max-w-2xl bg-white/15 backdrop-blur-xl border-white/30 shadow-2xl rounded-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/20">
             <Dumbbell className="h-8 w-8 text-accent" />
           </div>
-          <CardTitle className="text-3xl">Join PrimePulse Fitness</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-3xl text-white">Join PrimePulse Fitness</CardTitle>
+          <CardDescription className="text-muted-white">
             Create your account and start your fitness journey today
           </CardDescription>
         </CardHeader>
@@ -227,7 +234,7 @@ const RegisterView = () => {
                 />
                 <label
                   htmlFor="terms"
-                  className="text-sm leading-tight text-muted-foreground"
+                  className="text-sm leading-tight text-white"
                 >
                   I agree to the{" "}
                   <Link to="/terms" className="text-accent hover:underline">
@@ -255,7 +262,7 @@ const RegisterView = () => {
             </Button>
 
             {/* Login Link */}
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-white">
               Already have an account?{" "}
               <Link
                 to="/auth/login"

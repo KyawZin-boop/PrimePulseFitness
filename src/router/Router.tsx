@@ -12,6 +12,7 @@ import DietPlansView from "@/modules/diet/DietPlansView";
 import ProgressView from "@/modules/progress/ProgressView";
 import StoreView from "@/modules/store/StoreView";
 import CheckoutView from "@/modules/store/CheckoutView";
+import CartView from "@/modules/store/CartView";
 import OrderHistory from "@/modules/user/OrderHistory";
 import OrderDetail from "@/modules/user/OrderDetail";
 import MessagesView from "@/modules/messages/MessagesView";
@@ -85,6 +86,10 @@ const Router = () => {
         {
           path: "shop",
           element: <StoreView />,
+        },
+        {
+          path: "shop/cart",
+          element: <CartView />,
         },
         {
           path: "orders",

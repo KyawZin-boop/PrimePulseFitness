@@ -25,89 +25,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/api";
+import useAuth from "@/hooks/useAuth";
 
 const TrainersView = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [showLoginConfirm, setShowLoginConfirm] = useState(false);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSpecialization, setSelectedSpecialization] =
     useState<string>("all");
-
-  // Mock trainers - replace with API call
-  // const trainers: Trainer[] = [
-  //   {
-  //     id: "trainer-1",
-  //     name: "Mike Chen",
-  //     email: "mike.chen@primepulse.com",
-  //     profilePhoto: "https://i.pravatar.cc/150?img=12",
-  //     bio: "Certified strength and conditioning specialist with 10+ years of experience helping clients achieve their fitness goals. Specializes in powerlifting and functional training.",
-  //     specializations: ["Strength Training", "Powerlifting", "Functional Fitness"],
-  //     certifications: ["CSCS", "NSCA-CPT", "CrossFit Level 2"],
-  //     rating: 4.9,
-  //     totalRatings: 127,
-  //     yearsExperience: 10,
-  //     availability: [
-  //       { dayOfWeek: 1, startTime: "06:00", endTime: "12:00", isAvailable: true },
-  //       { dayOfWeek: 3, startTime: "06:00", endTime: "12:00", isAvailable: true },
-  //       { dayOfWeek: 5, startTime: "06:00", endTime: "12:00", isAvailable: true },
-  //     ],
-  //     hourlyRate: 75,
-  //   },
-  //   {
-  //     id: "trainer-2",
-  //     name: "Sarah Williams",
-  //     email: "sarah.williams@primepulse.com",
-  //     profilePhoto: "https://i.pravatar.cc/150?img=45",
-  //     bio: "HIIT and cardio expert passionate about high-energy workouts. Trained professional athletes and everyday fitness enthusiasts alike.",
-  //     specializations: ["HIIT", "Cardio", "Weight Loss", "Athletic Performance"],
-  //     certifications: ["ACE-CPT", "HIIT Specialist", "TRX Certified"],
-  //     rating: 4.8,
-  //     totalRatings: 98,
-  //     yearsExperience: 7,
-  //     availability: [
-  //       { dayOfWeek: 2, startTime: "14:00", endTime: "20:00", isAvailable: true },
-  //       { dayOfWeek: 4, startTime: "14:00", endTime: "20:00", isAvailable: true },
-  //       { dayOfWeek: 6, startTime: "09:00", endTime: "15:00", isAvailable: true },
-  //     ],
-  //     hourlyRate: 65,
-  //   },
-  //   {
-  //     id: "trainer-3",
-  //     name: "Alex Rodriguez",
-  //     email: "alex.rodriguez@primepulse.com",
-  //     profilePhoto: "https://i.pravatar.cc/150?img=33",
-  //     bio: "Holistic wellness coach focusing on yoga, mindfulness, and balanced nutrition. Helps clients achieve physical and mental harmony.",
-  //     specializations: ["Yoga", "Pilates", "Nutrition", "Mind-Body Balance"],
-  //     certifications: ["RYT-500", "Nutrition Coach", "Pilates Mat Certified"],
-  //     rating: 4.7,
-  //     totalRatings: 84,
-  //     yearsExperience: 8,
-  //     availability: [
-  //       { dayOfWeek: 1, startTime: "08:00", endTime: "16:00", isAvailable: true },
-  //       { dayOfWeek: 3, startTime: "08:00", endTime: "16:00", isAvailable: true },
-  //       { dayOfWeek: 5, startTime: "08:00", endTime: "16:00", isAvailable: true },
-  //     ],
-  //     hourlyRate: 60,
-  //   },
-  //   {
-  //     id: "trainer-4",
-  //     name: "Jordan Lee",
-  //     email: "jordan.lee@primepulse.com",
-  //     profilePhoto: "https://i.pravatar.cc/150?img=68",
-  //     bio: "Former competitive bodybuilder specializing in muscle building and body transformation. Results-driven approach with personalized nutrition plans.",
-  //     specializations: ["Bodybuilding", "Muscle Gain", "Nutrition Planning"],
-  //     certifications: ["ISSA-CFT", "Sports Nutritionist", "Bodybuilding Coach"],
-  //     rating: 4.9,
-  //     totalRatings: 142,
-  //     yearsExperience: 12,
-  //     availability: [
-  //       { dayOfWeek: 2, startTime: "05:00", endTime: "11:00", isAvailable: true },
-  //       { dayOfWeek: 4, startTime: "05:00", endTime: "11:00", isAvailable: true },
-  //       { dayOfWeek: 6, startTime: "06:00", endTime: "12:00", isAvailable: true },
-  //     ],
-  //     hourlyRate: 80,
-  //   },
-  // ];
 
   const { data: trainers } = api.trainers.getAllTrainers.useQuery();
 
@@ -127,17 +54,16 @@ const TrainersView = () => {
     return matchesSearch && matchesSpecialization;
   });
 
-  const getDayName = (dayOfWeek: number) => {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    return days[dayOfWeek];
-  };
-
   const handleBookSession = (trainer: Trainer) => {
     navigate("/bookings");
     toast.success(`Redirecting to book a session with ${trainer.name}`);
   };
 
   const handleSendMessage = (trainer: Trainer) => {
+    if (!isAuthenticated) {
+      setShowLoginConfirm(true);
+      return;
+    }
     navigate(`/messages?trainer=${trainer.userID}`);
     toast.success(`Opening chat with ${trainer.name}`);
   };
@@ -393,6 +319,38 @@ const TrainersView = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showLoginConfirm} onOpenChange={setShowLoginConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              You need to be logged in to add items to your cart. Would you like
+              to login now?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                  navigate(
+                    `/auth/login`
+                  );
+                setShowLoginConfirm(false);
+              }}
+            >
+              Yes, Login
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowLoginConfirm(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

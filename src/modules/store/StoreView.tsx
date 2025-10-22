@@ -13,33 +13,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Minus,
-  Plus,
-  ShoppingBag,
-  ShoppingCart,
-  Star,
-  Trash2,
-} from "lucide-react";
+import { ShoppingCart, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import api from "@/api";
 import useAuth from "@/hooks/useAuth";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
-import type { RootState } from "@/store"; // Adjust path as needed for RootState
-import {
-  addToCart,
-  removeFromCart,
-  updateQuantity,
-} from "@/store/slices/cartSlice";
+import { addToCart } from "@/store/slices/cartSlice";
 
 const StoreView = () => {
   const dispatch = useDispatch();
-  const { items, totalItems, totalPrice } = useSelector(
-    (state: RootState) => state.cart
-  );
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -47,7 +32,6 @@ const StoreView = () => {
     null
   );
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [showCart, setShowCart] = useState(false);
   const [showLoginConfirm, setShowLoginConfirm] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<ProductType | null>(
     null
@@ -74,7 +58,7 @@ const StoreView = () => {
         );
         toast.success(`${product.name} added to cart!`);
       }
-      navigate("/store", { replace: true });
+      navigate("/shop", { replace: true });
     }
   }, [addToCartParam, isAuthenticated, products, dispatch, navigate]);
 
@@ -102,19 +86,6 @@ const StoreView = () => {
     toast.success(`${product.name} added to cart!`);
   };
 
-  const handleUpdateQuantity = (productId: string, delta: number) => {
-    const item = items.find((i) => i.productID === productId);
-    if (item) {
-      const newQuantity = Math.max(0, item.quantity + delta);
-      dispatch(updateQuantity({ productID: productId, quantity: newQuantity }));
-    }
-  };
-
-  const handleRemoveFromCart = (productId: string) => {
-    dispatch(removeFromCart(productId));
-    toast.success("Item removed from cart");
-  };
-
   return (
     <div className="container mx-auto py-8 px-4 pt-20">
       <div className="mb-8 flex items-center justify-between">
@@ -124,19 +95,6 @@ const StoreView = () => {
             Premium equipment, apparel, and supplements
           </p>
         </div>
-        <Button
-          onClick={() => setShowCart(true)}
-          variant="outline"
-          className="relative"
-        >
-          <ShoppingCart className="mr-2 h-4 w-4" />
-          Cart
-          {totalItems > 0 && (
-            <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs text-white">
-              {totalItems}
-            </span>
-          )}
-        </Button>
       </div>
 
       {/* Category Filters */}
@@ -362,120 +320,6 @@ const StoreView = () => {
               Cancel
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Shopping Cart Modal */}
-      <Dialog open={showCart} onOpenChange={setShowCart}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5" />
-              Shopping Cart
-            </DialogTitle>
-            <DialogDescription>
-              {items.length === 0
-                ? "Your cart is empty"
-                : `${totalItems} ${
-                    totalItems === 1 ? "item" : "items"
-                  } in your cart`}
-            </DialogDescription>
-          </DialogHeader>
-
-          {items.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">
-              <ShoppingCart className="mx-auto mb-4 h-16 w-16 opacity-20" />
-              <p>No items in cart yet</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="max-h-96 space-y-3 overflow-y-auto">
-                {items.map((item) => (
-                  <div
-                    key={item.productID}
-                    className="flex gap-4 rounded-lg border bg-card p-3"
-                  >
-                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded bg-secondary">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="flex flex-1 flex-col justify-between">
-                      <div>
-                        <h4 className="font-medium">{item.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          ${item.discountedPrice.toFixed(2)} each
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleUpdateQuantity(item.productID, -1)
-                          }
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-8 text-center font-medium">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleUpdateQuantity(item.productID, 1)
-                          }
-                          disabled={item.quantity >= item.stock}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end justify-between">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleRemoveFromCart(item.productID)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <span className="font-bold text-accent">
-                        ${(item.discountedPrice * item.quantity).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t pt-4">
-                <div className="mb-4 flex items-center justify-between text-lg font-bold">
-                  <span>Total:</span>
-                  <span className="text-accent">${totalPrice.toFixed(2)}</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCart(false)}
-                    className="flex-1"
-                  >
-                    Continue Shopping
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowCart(false);
-                      navigate("/checkout");
-                    }}
-                    className="flex-1"
-                  >
-                    Checkout
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </div>
