@@ -12,6 +12,9 @@ type Trainer = {
   description: string;
   specialties: string[];
   fees: number;
+  createdAt: Date;
+  updatedAt: Date;
+  activeFlag: boolean;
 };
 
 type AddTrainer = {

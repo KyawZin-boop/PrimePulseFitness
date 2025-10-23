@@ -35,7 +35,9 @@ import TrainerProfileView from "@/modules/trainer/TrainerProfileView";
 import TrainerReviewsView from "@/modules/trainer/TrainerReviewsView";
 import AdminDashboard from "@/modules/admin/AdminDashboard";
 import AdminUsersView from "@/modules/admin/AdminUsersView";
+import AdminUserProfile from "@/modules/admin/AdminUserProfile";
 import AdminTrainersView from "@/modules/admin/AdminTrainersView";
+import AdminTrainerProfile from "@/modules/admin/AdminTrainerProfile";
 import AdminClassesView from "@/modules/admin/AdminClassesView";
 import AdminBookingsView from "@/modules/admin/AdminBookingsView";
 import AdminProductsView from "@/modules/admin/AdminProductsView";
@@ -206,8 +208,16 @@ const Router = () => {
           element: <AdminUsersView />,
         },
         {
+          path: "users/:userId",
+          element: <AdminUserProfile />,
+        },
+        {
           path: "trainers",
           element: <AdminTrainersView />,
+        },
+        {
+          path: "trainers/:trainerId",
+          element: <AdminTrainerProfile />,
         },
         {
           path: "classes",
