@@ -15,13 +15,29 @@ type GymClass = {
 };
 
 type AddGymClass = {
-  className: string;
   trainerID: string;
-  duration: string;
-  capacity: string;
-  time: string;
+  className: string;
+  duration: number;
+  price: number;
   difficulty: "Beginner" | "Intermediate" | "Advanced" | "All Levels";
-  rating: number;
   description: string;
   highlights: string[];
+  time: string;
+  capacity: number;
+  rating: number;
+};
+
+type UpdateClassDTO = {
+  classID: string;
+  trainerID: string;
+  className: string;
+  duration: number;
+  price: number;
+  difficulty: "Beginner" | "Intermediate" | "Advanced" | "All Levels";
+  description: string;
+  highlights: string[];
+  time: string;
+  capacity: number;
+  assignedCount: number;
+  rating: number;
 };
