@@ -26,6 +26,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/api";
 import useAuth from "@/hooks/useAuth";
+import ReviewDialog from "@/components/dialogs/ReviewDialog";
+import ReviewsList from "@/components/ReviewsList";
+import type { Review } from "@/api/reviews/type";
 
 const TrainersView = () => {
   const navigate = useNavigate();
@@ -35,6 +38,8 @@ const TrainersView = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSpecialization, setSelectedSpecialization] =
     useState<string>("all");
+  const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [userHasReviewed, setUserHasReviewed] = useState(false);
 
   const { data: trainers } = api.trainers.getAllTrainers.useQuery();
 
@@ -66,6 +71,18 @@ const TrainersView = () => {
     }
     navigate(`/messages?trainer=${trainer.userID}`);
     toast.success(`Opening chat with ${trainer.name}`);
+  };
+
+  const handleWriteReview = () => {
+    if (!isAuthenticated) {
+      setShowLoginConfirm(true);
+      return;
+    }
+    setShowReviewDialog(true);
+  };
+
+  const handleUserReviewFound = (review: Review | null) => {
+    setUserHasReviewed(!!review);
   };
 
   return (
@@ -180,9 +197,15 @@ const TrainersView = () => {
       {/* Trainer Detail Modal */}
       <Dialog
         open={!!selectedTrainer}
-        onOpenChange={() => setSelectedTrainer(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTrainer(null);
+            setShowReviewDialog(false);
+            setUserHasReviewed(false);
+          }
+        }}
       >
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedTrainer && (
             <>
               <DialogHeader>
@@ -204,17 +227,6 @@ const TrainersView = () => {
                     <DialogTitle className="text-2xl">
                       {selectedTrainer.name}
                     </DialogTitle>
-                    <div className="mt-1 flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                        <span className="font-semibold">
-                          {selectedTrainer.rating}
-                        </span>
-                        <span className="text-muted-foreground">
-                          ({selectedTrainer.rating} reviews)
-                        </span>
-                      </div>
-                    </div>
                     <DialogDescription className="mt-2">
                       {selectedTrainer.description}
                     </DialogDescription>
@@ -256,29 +268,6 @@ const TrainersView = () => {
                   </div>
                 </div>
 
-                {/* Availability */}
-                <div>
-                  <h3 className="mb-2 flex items-center gap-2 font-semibold">
-                    <Calendar className="h-5 w-5 text-accent" />
-                    Availability
-                  </h3>
-                  {/* <div className="grid gap-2 sm:grid-cols-2">
-                    {selectedTrainer.availability.map((slot, index) => (
-                      <div
-                        key={index}
-                        className="rounded-lg border bg-gradient-card p-3"
-                      >
-                        <div className="font-medium">
-                          {getDayName(slot.dayOfWeek)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {slot.startTime} - {slot.endTime}
-                        </div>
-                      </div>
-                    ))}
-                  </div> */}
-                </div>
-
                 {/* Pricing & Experience */}
                 <div className="rounded-lg border bg-secondary/30 p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -315,12 +304,43 @@ const TrainersView = () => {
                     <MessageCircle className="mr-2 h-4 w-4" />
                     Send Message
                   </Button>
+                  {!userHasReviewed && (
+                    <Button
+                      variant="outline"
+                      onClick={handleWriteReview}
+                    >
+                      <Star className="mr-2 h-4 w-4" />
+                      Write Review
+                    </Button>
+                  )}
+                </div>
+
+                {/* Reviews Section */}
+                <div className="border-t pt-6">
+                  <h3 className="mb-4 text-lg font-semibold">Reviews</h3>
+                  <ReviewsList
+                    targetID={selectedTrainer.trainerID}
+                    targetType="trainer"
+                    targetName={selectedTrainer.name}
+                    onUserReviewFound={handleUserReviewFound}
+                  />
                 </div>
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Review Dialog */}
+      {selectedTrainer && (
+        <ReviewDialog
+          open={showReviewDialog}
+          onOpenChange={setShowReviewDialog}
+          targetID={selectedTrainer.trainerID}
+          targetType="trainer"
+          targetName={selectedTrainer.name}
+        />
+      )}
 
       <Dialog open={showLoginConfirm} onOpenChange={setShowLoginConfirm}>
         <DialogContent>
@@ -358,3 +378,4 @@ const TrainersView = () => {
 };
 
 export default TrainersView;
+

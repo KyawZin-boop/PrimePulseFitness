@@ -34,6 +34,7 @@ type OrderDetailType = {
 type OrderProductResponseType = {
   orderDetailID: string;
   productID: string;
+  productName: string;
   quantity: number;
   price: number;
 };

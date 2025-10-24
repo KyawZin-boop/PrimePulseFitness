@@ -88,11 +88,11 @@ const Navigation = () => {
                   <DropdownMenuContent className="" align="end">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuGroup>
-                      <DropdownMenuItem>Profile</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/orders")}>
                         Order History
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Settings</DropdownMenuItem>
+                      {/* <DropdownMenuItem>Settings</DropdownMenuItem> */}
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => handleLogout()}>
@@ -168,8 +168,10 @@ const Navigation = () => {
                       <DropdownMenuContent className="" align="end">
                         <DropdownMenuLabel>My Account</DropdownMenuLabel>
                         <DropdownMenuGroup>
-                          <DropdownMenuItem>Profile</DropdownMenuItem>
-                          <DropdownMenuItem>Settings</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/orders")}>
+                            Order History
+                          </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleLogout()}>
