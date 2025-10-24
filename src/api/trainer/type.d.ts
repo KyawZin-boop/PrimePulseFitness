@@ -18,7 +18,6 @@ type Trainer = {
 };
 
 type AddTrainer = {
-  userID: string;
   name: string;
   email: string;
   specialty: string;

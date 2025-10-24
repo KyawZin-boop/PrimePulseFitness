@@ -1,8 +1,9 @@
-import React, { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Star } from "lucide-react";
+import { Loader2, Plus, Search, Star, UploadCloud } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
@@ -11,42 +12,86 @@ import {
   suspendTrainer,
   activateTrainer,
 } from "@/api/trainer";
-import { getAllUsers } from "@/api/user";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { uploadFile } from "@/api/files";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+
+type CreateTrainerFormState = {
+  name: string;
+  email: string;
+  fees: string;
+  specialty: string;
+  experience: string;
+  rating: string;
+  clients: string;
+  imageUrl: string | null;
+  certifications: string;
+  description: string;
+  specialties: string;
+};
+
+const emptyTrainerFormState: CreateTrainerFormState = {
+  name: "",
+  email: "",
+  fees: "",
+  specialty: "",
+  experience: "",
+  rating: "0",
+  clients: "0",
+  imageUrl: null,
+  certifications: "",
+  description: "",
+  specialties: "",
+};
+
+const MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_PROFILE_PHOTO_TYPES = ["image/jpeg", "image/png", "image/jpg"] as const;
 
 const AdminTrainersView = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [showCreateFromUser, setShowCreateFromUser] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [specialty, setSpecialty] = useState<string>("");
-  const [experience, setExperience] = useState<string>("");
-  const [rating, setRating] = useState<number>(0);
-  const [clients, setClients] = useState<number>(0);
-  const [certificationsInput, setCertificationsInput] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
-  const [specialtiesInput, setSpecialtiesInput] = useState<string>("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [formState, setFormState] = useState<CreateTrainerFormState>(emptyTrainerFormState);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const trainersQuery = getAllTrainers.useQuery();
-  const usersQuery = getAllUsers.useQuery();
+
+  const uploadPhotoMutation = uploadFile.useMutation({
+    onSuccess: (fileUrl) => {
+      setFormState((prev) => ({ ...prev, imageUrl: fileUrl }));
+      toast.success("Photo uploaded");
+    },
+    onError: (error) => {
+      const message =
+        error?.response?.data?.message ?? error?.message ?? "Failed to upload photo";
+      toast.error(message);
+    },
+  });
 
   const createTrainerMutation = addNewTrainer.useMutation({
     onSuccess: () => {
-      toast.success("Trainer created");
+      toast.success("Trainer created successfully");
       queryClient.invalidateQueries({ queryKey: ["getAllTrainers"] });
-      setShowCreateFromUser(false);
-      setSelectedUserId(null);
+      setIsCreateDialogOpen(false);
+      resetForm();
     },
-    onError: () => toast.error("Failed to create trainer"),
+    onError: (error) => {
+      toast.error(error?.message ?? "Failed to create trainer");
+    },
   });
-
-  const uploadMutation = uploadFile.useMutation();
 
   const suspendMutation = suspendTrainer.useMutation({
     onSuccess: () => {
@@ -70,6 +115,102 @@ const AdminTrainersView = () => {
       (trainer.email ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const resetForm = () => {
+    setFormState(emptyTrainerFormState);
+    setImageFile(null);
+  };
+
+  const imagePreview = useMemo(() => {
+    if (imageFile) {
+      return URL.createObjectURL(imageFile);
+    }
+    if (formState.imageUrl) {
+      return formState.imageUrl;
+    }
+    return null;
+  }, [imageFile, formState.imageUrl]);
+
+  const handleInputChange = (field: keyof CreateTrainerFormState) => (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormState((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handlePhotoUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_PROFILE_PHOTO_SIZE) {
+      toast.error("Image must be 5MB or smaller");
+      e.target.value = "";
+      return;
+    }
+
+    const isAllowed = ALLOWED_PROFILE_PHOTO_TYPES.some(
+      (type) => file.type === type
+    );
+    if (!isAllowed) {
+      toast.error("Only JPG and PNG images are supported");
+      e.target.value = "";
+      return;
+    }
+
+    setImageFile(file);
+    e.target.value = "";
+  };
+
+  const handleCreateTrainer = async () => {
+    if (!formState.name.trim() || !formState.email.trim()) {
+      toast.error("Name and email are required");
+      return;
+    }
+
+    if (!formState.specialty.trim()) {
+      toast.error("Specialty is required");
+      return;
+    }
+
+    if (!formState.fees.trim() || Number(formState.fees) < 0) {
+      toast.error("Valid fees amount is required");
+      return;
+    }
+
+    try {
+      let imageUrl: string | null = null;
+
+      if (imageFile) {
+        imageUrl = await uploadPhotoMutation.mutateAsync(imageFile);
+      }
+
+      const payload: AddTrainer = {
+        name: formState.name.trim(),
+        email: formState.email.trim(),
+        specialty: formState.specialty.trim(),
+        experience: formState.experience.trim(),
+        rating: Number(formState.rating) || 0,
+        clients: Number(formState.clients) || 0,
+        fees: Number(formState.fees),
+        imageUrl,
+        certifications: formState.certifications
+          ? formState.certifications.split(",").map((s) => s.trim()).filter(Boolean)
+          : [],
+        description: formState.description.trim(),
+        specialties: formState.specialties
+          ? formState.specialties.split(",").map((s) => s.trim()).filter(Boolean)
+          : [],
+      };
+
+      createTrainerMutation.mutate(payload);
+    } catch (error) {
+      console.error("Create trainer error:", error);
+      toast.error("Failed to upload image or create trainer");
+    }
+  };
+
+  const isCreating = createTrainerMutation.isPending;
+  const isUploading = uploadPhotoMutation.isPending;
+  const isBusy = isCreating || isUploading;
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8 flex items-center justify-between">
@@ -79,284 +220,209 @@ const AdminTrainersView = () => {
             Manage trainer applications and performance
           </p>
         </div>
-        <div>
-          <Button onClick={() => setShowCreateFromUser((s) => !s)}>
-            Create Trainer from User
-          </Button>
-        </div>
-      </div>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Trainer
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Trainer</DialogTitle>
+              <DialogDescription>
+                Fill in all trainer details to create a new trainer profile
+              </DialogDescription>
+            </DialogHeader>
 
-      {/* Create from user panel */}
-      {showCreateFromUser && (
-        <Card className="mb-6">
-          <CardContent>
-            <div className="mb-3">
-              <Input
-                placeholder="Filter users by name or email"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            {usersQuery.isLoading && <div>Loading users...</div>}
-            {usersQuery.isError && (
-              <div className="text-destructive">Failed to load users</div>
-            )}
-
-            <div className="space-y-2 max-h-64 overflow-auto">
-              {(usersQuery.data || [])
-                .filter(
-                  (u: any) =>
-                    (u.name ?? "")
-                      .toLowerCase()
-                      .includes(searchQuery.toLowerCase()) ||
-                    (u.email ?? "")
-                      .toLowerCase()
-                      .includes(searchQuery.toLowerCase())
-                )
-                .map((u: any) => (
-                  <div
-                    key={u.userID}
-                    className="flex items-center justify-between p-2 border rounded"
-                  >
-                    <div>
-                      <div className="font-medium">{u.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {u.email}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedUserId(u.userID)}
-                      >
-                        Select
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="athletic"
-                        onClick={() => {
-                          const payload = {
-                            userID: u.userID,
-                            name: u.name,
-                            email: u.email,
-                            specialty: "General",
-                            experience: "0",
-                            rating: 0,
-                            clients: 0,
-                            imageUrl: null,
-                            certifications: [],
-                            description: "",
-                            specialties: [],
-                          };
-                          createTrainerMutation.mutate(payload);
-                        }}
-                      >
-                        Create
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-
-            {selectedUserId && (
-              <div className="mt-3">
-                <h3 className="font-semibold mb-2">
-                  Create trainer for selected user
-                </h3>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="text-sm">Name</label>
-                    <Input
-                      value={
-                        (usersQuery.data || []).find(
-                          (x: any) => x.userID === selectedUserId
-                        )?.name || ""
-                      }
-                      readOnly
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm">Email</label>
-                    <Input
-                      value={
-                        (usersQuery.data || []).find(
-                          (x: any) => x.userID === selectedUserId
-                        )?.email || ""
-                      }
-                      readOnly
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm">Specialty</label>
-                    <Input
-                      value={specialty}
-                      onChange={(e) => setSpecialty(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm">Experience</label>
-                    <Input
-                      placeholder="e.g., 3 years"
-                      value={experience}
-                      onChange={(e) => setExperience(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm">Rating</label>
-                    <Input
-                      type="number"
-                      value={String(rating)}
-                      onChange={(e) => setRating(Number(e.target.value))}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm">Clients</label>
-                    <Input
-                      type="number"
-                      value={String(clients)}
-                      onChange={(e) => setClients(Number(e.target.value))}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-sm">
-                      Certifications (comma separated)
-                    </label>
-                    <Input
-                      value={certificationsInput}
-                      onChange={(e) => setCertificationsInput(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-sm">
-                      Specialties (comma separated)
-                    </label>
-                    <Input
-                      value={specialtiesInput}
-                      onChange={(e) => setSpecialtiesInput(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-sm">Description</label>
-                    <Textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-sm">Profile image</label>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0] ?? null;
-                        setImageFile(f);
-                        setImagePreview(f ? URL.createObjectURL(f) : null);
-                      }}
-                    />
-                    <div className="flex items-center gap-3 mt-2">
-                      <Button
-                        type="button"
-                        onClick={() => fileRef.current?.click()}
-                      >
-                        Choose image
-                      </Button>
-                      {imagePreview && (
-                        <img
-                          src={imagePreview}
-                          alt="preview"
-                          className="w-20 h-20 object-cover rounded-md border"
-                        />
-                      )}
-                    </div>
-                  </div>
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter trainer name"
+                    value={formState.name}
+                    onChange={handleInputChange("name")}
+                  />
                 </div>
 
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    onClick={async () => {
-                      const u = (usersQuery.data || []).find(
-                        (x: any) => x.userID === selectedUserId
-                      );
-                      if (!u) return toast.error("Selected user not found");
-                      if (!specialty)
-                        return toast.error("Specialty is required");
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="trainer@example.com"
+                    value={formState.email}
+                    onChange={handleInputChange("email")}
+                  />
+                </div>
 
-                      try {
-                        let imageUrl: string | null = null;
-                        if (imageFile) {
-                          imageUrl = await uploadMutation.mutateAsync(
-                            imageFile as File
-                          );
-                        }
+                <div className="space-y-2">
+                  <Label htmlFor="specialty">Primary Specialty *</Label>
+                  <Input
+                    id="specialty"
+                    placeholder="e.g., Strength Training"
+                    value={formState.specialty}
+                    onChange={handleInputChange("specialty")}
+                  />
+                </div>
 
-                        const payload = {
-                          userID: u.userID,
-                          name: u.name,
-                          email: u.email,
-                          specialty,
-                          experience,
-                          rating,
-                          clients,
-                          imageUrl,
-                          certifications: certificationsInput
-                            ? certificationsInput
-                                .split(",")
-                                .map((s) => s.trim())
-                                .filter(Boolean)
-                            : [],
-                          description,
-                          specialties: specialtiesInput
-                            ? specialtiesInput
-                                .split(",")
-                                .map((s) => s.trim())
-                                .filter(Boolean)
-                            : [],
-                        };
+                <div className="space-y-2">
+                  <Label htmlFor="experience">Experience</Label>
+                  <Input
+                    id="experience"
+                    placeholder="e.g., 5 years"
+                    value={formState.experience}
+                    onChange={handleInputChange("experience")}
+                  />
+                </div>
 
-                        createTrainerMutation.mutate(payload as any);
-                      } catch (err) {
-                        console.error(err);
-                        toast.error("Failed to upload image or create trainer");
-                      }
-                    }}
-                    disabled={
-                      (createTrainerMutation as any).isLoading ||
-                      (uploadMutation as any).isLoading
-                    }
-                  >
-                    {(createTrainerMutation as any).isLoading ||
-                    (uploadMutation as any).isLoading
-                      ? "Creating..."
-                      : "Create Trainer"}
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="fees">Session Fee ($) *</Label>
+                  <Input
+                    id="fees"
+                    type="number"
+                    min="0"
+                    value={formState.fees}
+                    onChange={handleInputChange("fees")}
+                  />
+                </div>
 
-                  <Button
-                    variant="ghost"
-                    onClick={() => setSelectedUserId(null)}
-                  >
-                    Cancel
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="rating">Rating</Label>
+                  <Input
+                    id="rating"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="5"
+                    value={formState.rating}
+                    onChange={handleInputChange("rating")}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="clients">Clients Trained</Label>
+                  <Input
+                    id="clients"
+                    type="number"
+                    min="0"
+                    value={formState.clients}
+                    onChange={handleInputChange("clients")}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="description">Professional Bio *</Label>
+                  <Textarea
+                    id="description"
+                    rows={4}
+                    placeholder="Share trainer's story, philosophy, and approach..."
+                    value={formState.description}
+                    onChange={handleInputChange("description")}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="specialties">Specialties (comma-separated)</Label>
+                  <Textarea
+                    id="specialties"
+                    rows={2}
+                    placeholder="e.g., Weight Loss, Muscle Building, HIIT"
+                    value={formState.specialties}
+                    onChange={handleInputChange("specialties")}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="certifications">Certifications (comma-separated)</Label>
+                  <Textarea
+                    id="certifications"
+                    rows={2}
+                    placeholder="e.g., NASM-CPT, ACE, ISSA"
+                    value={formState.certifications}
+                    onChange={handleInputChange("certifications")}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Profile Photo</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Upload a square image (max 5MB). Supported formats: JPG, PNG.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => fileRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <UploadCloud className="mr-2 h-4 w-4" />
+                          {imagePreview ? "Change Photo" : "Upload Photo"}
+                        </>
+                      )}
+                    </Button>
+                    {imagePreview && (
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="h-20 w-20 rounded-md border object-cover"
+                      />
+                    )}
+                  </div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                  />
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </div>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" disabled={isBusy}>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button
+                onClick={handleCreateTrainer}
+                disabled={isBusy}
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Trainer"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Search Trainers */}
+      <div className="mb-6 relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search trainers by name or email..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
 
       {/* Trainers List */}
       <div>
