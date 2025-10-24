@@ -1,5 +1,6 @@
 import axios from "@/configs/axios";
 import {
+  QueryOptions,
   useMutation,
   UseMutationOptions,
   useQuery,
@@ -102,6 +103,48 @@ export const updateBookingStatus = {
           .post(`${BASE_URL}/UpdateBookingStatus`, null, {
             params: { bookingId, status },
           })
+          .then((res) => res.data);
+        return response.data;
+      },
+      ...opt,
+    }),
+};
+
+export const suspendTrainer = {
+  useMutation: (opt?: Partial<UseMutationOptions<null, Error, string>>) => {
+    return useMutation<null, Error, string>({
+      mutationFn: async (trainerId) => {
+        const request = await axios.post(
+          `${BASE_URL}/SuspendTrainer/${trainerId}`
+        );
+        return request.data;
+      },
+      ...opt,
+    });
+  },
+};
+
+export const activateTrainer = {
+  useMutation: (opt?: Partial<UseMutationOptions<null, Error, string>>) => {
+    return useMutation<null, Error, string>({
+      mutationFn: async (trainerId) => {
+        const request = await axios.post(
+          `${BASE_URL}/ActivateTrainer/${trainerId}`
+        );
+        return request.data;
+      },
+      ...opt,
+    });
+  },
+};
+
+export const getTrainerById = {
+  useQuery: (trainerId: string, opt?: QueryOptions<Trainer>) =>
+    useQuery<Trainer, Error>({
+      queryKey: ["getTrainerById", trainerId],
+      queryFn: async () => {
+        const response: ApiResponse<Trainer> = await axios
+          .get(`${BASE_URL}/GetTrainerById/${trainerId}`)
           .then((res) => res.data);
         return response.data;
       },
