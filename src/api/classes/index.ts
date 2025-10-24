@@ -4,6 +4,7 @@ import {
   UseMutationOptions,
   useQuery,
   QueryOptions,
+  UseQueryOptions,
 } from "@tanstack/react-query";
 
 const BASE_URL = "Class";
@@ -55,6 +56,19 @@ export const getGymClassById = {
       queryFn: async () => {
         const response: ApiResponse<GymClass> = await axios.get(`${BASE_URL}/GetClassById/${classID}`).then(res => res.data);
 
+        return response.data;
+      },
+      ...opt,
+    })
+};
+
+export const getClassesByTrainerId = {
+  useQuery: (trainerId: string, opt?: Partial<UseQueryOptions<GymClass[]>>) => 
+    useQuery<GymClass[], Error>({
+      queryKey: ["getClassesByTrainerId", trainerId],
+      queryFn: async () => {
+        const response: ApiResponse<GymClass[]> = await axios.get(`${BASE_URL}/GetClassesByTrainerId/${trainerId}`).then(res => res.data);
+        
         return response.data;
       },
       ...opt,

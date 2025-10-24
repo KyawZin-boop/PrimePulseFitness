@@ -89,11 +89,11 @@ const TrainerLayout = () => {
       label: "Workout Programs",
       path: "/trainer/programs",
     },
-    {
-      icon: <Award className="h-5 w-5" />,
-      label: "Certifications",
-      path: "/trainer/certifications",
-    },
+    // {
+    //   icon: <Award className="h-5 w-5" />,
+    //   label: "Certifications",
+    //   path: "/trainer/certifications",
+    // },
     {
       icon: <UserCircle className="h-5 w-5" />,
       label: "Profile",
@@ -132,7 +132,7 @@ const TrainerLayout = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4">
+          <nav className="flex-1 overflow-y-auto p-4 flex flex-col">
             <ul className="space-y-1">
               {navItems.map((item) => {
                 const isActive =

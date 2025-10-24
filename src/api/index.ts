@@ -8,6 +8,8 @@ import * as files from "./files";
 import * as chat from "./chat";
 import * as user from "./user";
 import * as orders from "./orders";
+import * as plan from "./plan";
+import * as program from "./program";
 
 class API {
   auth: typeof auth;
@@ -20,6 +22,8 @@ class API {
   chat: typeof chat;
   user: typeof user;
   orders: typeof orders;
+  plan: typeof plan;
+  program: typeof program;
 
   constructor() {
     this.auth = auth;
@@ -32,6 +36,8 @@ class API {
     this.chat = chat;
     this.user = user;
     this.orders = orders;
+    this.plan = plan;
+    this.program = program;
   }
 }
 

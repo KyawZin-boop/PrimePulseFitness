@@ -8,56 +8,22 @@ import {
 } from "@/components/ui/card";
 import { Mail, Phone, TrendingUp, User, Calendar, Dumbbell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import type { Client } from "@/types";
+import api from "@/api";
+import useAuth from "@/hooks/useAuth";
 
 const TrainerClientsView = () => {
   const navigate = useNavigate();
+  const { userCredentials } = useAuth();
+  const userId = userCredentials?.userId ?? "";
 
-  // Mock clients - replace with API call
-  const clients: Client[] = [
-    {
-      id: "1",
-      name: "Alex Johnson",
-      email: "alex.johnson@example.com",
-      phone: "+1 (555) 123-4567",
-      profilePhoto: "https://i.pravatar.cc/150?img=1",
-      joinedDate: new Date("2025-01-15"),
-      activePrograms: 2,
-      completedSessions: 24,
-      currentWeight: 82,
-      goalWeight: 75,
-      assignedDietPlan: "Lean Muscle Builder",
-      notes: "Focus on strength training, recovering from knee injury",
-    },
-    {
-      id: "2",
-      name: "Sarah Williams",
-      email: "sarah.w@example.com",
-      phone: "+1 (555) 234-5678",
-      profilePhoto: "https://i.pravatar.cc/150?img=5",
-      joinedDate: new Date("2025-02-20"),
-      activePrograms: 1,
-      completedSessions: 18,
-      currentWeight: 65,
-      goalWeight: 60,
-      assignedDietPlan: "Fat Loss Accelerator",
-      notes: "Cardio enthusiast, preparing for marathon",
-    },
-    {
-      id: "3",
-      name: "Mike Chen",
-      email: "mike.chen@example.com",
-      phone: "+1 (555) 345-6789",
-      profilePhoto: "https://i.pravatar.cc/150?img=12",
-      joinedDate: new Date("2024-11-10"),
-      activePrograms: 3,
-      completedSessions: 48,
-      currentWeight: 78,
-      goalWeight: 80,
-      assignedDietPlan: "Premium Food Box",
-      notes: "Advanced lifter, focusing on muscle gain",
-    },
-  ];
+  const { data: trainer } = api.trainers.getTrainerData.useQuery(userId, {
+    enabled: Boolean(userId),
+  });
+  const trainerId = trainer?.trainerID ?? "";
+
+  const { data: clients } = api.trainers.getClient.useQuery(trainerId, {
+    enabled: Boolean(trainerId),
+  });
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -69,26 +35,27 @@ const TrainerClientsView = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {clients.map((client) => (
+        {clients && clients.map((client) => (
           <Card
-            key={client.id}
+            key={client.clientID}
             className="cursor-pointer shadow-card transition hover:shadow-athletic"
-            onClick={() => navigate(`/trainer/clients/${client.id}`)}
+            onClick={() => navigate(`/trainer/clients/${client.clientID}`)}
           >
             <CardHeader>
               <div className="mb-4 flex items-start gap-3">
                 <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                  {client.profilePhoto ? (
+                  {/* {client.profilePhoto ? (
                     <img
                       src={client.profilePhoto}
                       alt={client.name}
                       className="h-full w-full object-cover"
                     />
-                  ) : (
+                  ) :  */}
+                  
                     <div className="flex h-full w-full items-center justify-center">
                       <User className="h-8 w-8 text-muted-foreground" />
                     </div>
-                  )}
+                  
                 </div>
                 <div className="flex-1 min-w-0">
                   <CardTitle className="truncate">{client.name}</CardTitle>
@@ -96,7 +63,7 @@ const TrainerClientsView = () => {
                     {client.email}
                   </CardDescription>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Joined {client.joinedDate.toLocaleDateString()}
+                    Joined {new Date(client.joinedDate).toUTCString().slice(0, 16)}
                   </p>
                 </div>
               </div>
@@ -109,14 +76,14 @@ const TrainerClientsView = () => {
                     <Dumbbell className="h-3 w-3" />
                     Programs
                   </div>
-                  <div className="font-semibold">{client.activePrograms}</div>
+                  <div className="font-semibold">asfd</div>
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-2">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     Sessions
                   </div>
-                  <div className="font-semibold">{client.completedSessions}</div>
+                  <div className="font-semibold">33</div>
                 </div>
               </div>
 
@@ -148,23 +115,11 @@ const TrainerClientsView = () => {
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(`/trainer/messages?client=${client.id}`);
+                    navigate(`/trainer/messages?client=${client.clientID}`);
                   }}
                 >
                   <Mail className="mr-1 h-3 w-3" />
                   Message
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.location.href = `tel:${client.phone}`;
-                  }}
-                >
-                  <Phone className="mr-1 h-3 w-3" />
-                  Call
                 </Button>
               </div>
             </CardContent>
@@ -172,7 +127,7 @@ const TrainerClientsView = () => {
         ))}
       </div>
 
-      {clients.length === 0 && (
+      {clients && clients.length === 0 && (
         <Card className="shadow-card">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <User className="h-16 w-16 text-muted-foreground opacity-20 mb-4" />

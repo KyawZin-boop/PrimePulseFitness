@@ -50,6 +50,23 @@ export const addNewTrainer = {
   },
 };
 
+export const updateTrainer = {
+  useMutation: (
+    opt?: Partial<UseMutationOptions<Trainer, Error, UpdateTrainer>>
+  ) => {
+    return useMutation<Trainer, Error, UpdateTrainer>({
+      mutationFn: async (payload) => {
+        const response: ApiResponse<Trainer> = await axios
+          .post(`${BASE_URL}/UpdateTrainer`, payload)
+          .then((res) => res.data);
+
+        return response.data;
+      },
+      ...opt,
+    });
+  },
+};
+
 export const getTrainerData = {
   useQuery: (userId: string, opt?: Partial<UseQueryOptions<Trainer, Error>>) =>
     useQuery<Trainer, Error>({
@@ -86,6 +103,21 @@ export const updateBookingStatus = {
             params: { bookingId, status },
           })
           .then((res) => res.data);
+        return response.data;
+      },
+      ...opt,
+    }),
+};
+
+export const getClient = {
+  useQuery: (trainerId: string, opt?: Partial<UseQueryOptions<Client[], Error>>) =>
+    useQuery<Client[], Error>({
+      queryKey: ["getClient", trainerId],
+      queryFn: async () => {
+        const response: ApiResponse<Client[]> = await axios
+          .get(`${BASE_URL}/GetClientByTrainerId`, { params: { trainerId: trainerId } })
+          .then((res) => res.data);
+
         return response.data;
       },
       ...opt,

@@ -70,10 +70,6 @@ const RegisterView = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      // API call to register user
-      // console.log("Registration data:", formData);
-      // toast.success("Account created successfully!");
-      // navigate("/auth/login");
 
       const payload: RegisterPayload = {
         name: formData.name,

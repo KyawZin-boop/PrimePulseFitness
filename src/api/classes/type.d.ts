@@ -1,10 +1,12 @@
 type GymClass = {
   classID: string;
-  className: string;
   trainerID: string;
+  className: string;
   trainerName: string;
   duration: string;
-  capacity: string;
+  capacity: number;
+  assignedCount: number;
+  price: number;
   time: string;
   difficulty: "Beginner" | "Intermediate" | "Advanced" | "All Levels";
   rating: number;

@@ -9,3 +9,11 @@ export type User = {
     createdAt: Date;
     updatedAt: Date;
 }
+
+export type UserResponse = {
+    userID: string;
+    name: string;
+    email: string;
+    age: number | null;
+    gender: string | null;
+}

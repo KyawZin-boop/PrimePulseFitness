@@ -1,3 +1,4 @@
+import api from "@/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -6,52 +7,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Users, Calendar, TrendingUp, BookOpen } from "lucide-react";
+import useAuth from "@/hooks/useAuth";
+import { Users, Calendar, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-interface GymClass {
-  id: string;
-  name: string;
-  description: string;
-  enrolledStudents: number;
-  capacity: number;
-  schedule: string;
-  upcomingSessions: number;
-}
 
 const TrainerClassesView = () => {
   const navigate = useNavigate();
+  const { userCredentials } = useAuth();
+  const userId = userCredentials?.userId ?? "";
 
-  // Mock data - replace with API call
-  const myClasses: GymClass[] = [
-    {
-      id: "1",
-      name: "Strength Forge",
-      description: "Advanced strength training and powerlifting techniques",
-      enrolledStudents: 24,
-      capacity: 30,
-      schedule: "Mon, Wed, Fri - 9:00 AM",
-      upcomingSessions: 6,
-    },
-    {
-      id: "2",
-      name: "Cardio Surge",
-      description: "High-intensity cardio workouts for endurance",
-      enrolledStudents: 18,
-      capacity: 20,
-      schedule: "Tue, Thu - 2:00 PM",
-      upcomingSessions: 4,
-    },
-    {
-      id: "3",
-      name: "Mind & Body Reset",
-      description: "Yoga and mindfulness for holistic wellness",
-      enrolledStudents: 15,
-      capacity: 15,
-      schedule: "Sat - 10:00 AM",
-      upcomingSessions: 2,
-    },
-  ];
+  const { data: trainer } = api.trainers.getTrainerData.useQuery(userId, {
+    enabled: Boolean(userId),
+  });
+  const trainerId = trainer?.trainerID ?? "";
+
+  const { data: myClasses } = api.classes.getClassesByTrainerId.useQuery(trainerId, {
+    enabled: Boolean(trainerId),
+  });
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -68,14 +40,14 @@ const TrainerClassesView = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {myClasses.map((gymClass) => (
+        {myClasses && myClasses.map((gymClass) => (
           <Card
-            key={gymClass.id}
+            key={gymClass.classID}
             className="cursor-pointer shadow-card transition hover:shadow-athletic"
-            onClick={() => navigate(`/trainer/classes/${gymClass.id}`)}
+            onClick={() => navigate(`/trainer/classes/${gymClass.classID}`)}
           >
             <CardHeader>
-              <CardTitle>{gymClass.name}</CardTitle>
+              <CardTitle>{gymClass.className}</CardTitle>
               <CardDescription className="line-clamp-2">
                 {gymClass.description}
               </CardDescription>
@@ -88,7 +60,7 @@ const TrainerClassesView = () => {
                     Students
                   </span>
                   <span className="font-medium">
-                    {gymClass.enrolledStudents}/{gymClass.capacity}
+                    {gymClass.assignedCount}/{gymClass.capacity}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -97,16 +69,7 @@ const TrainerClassesView = () => {
                     Schedule
                   </span>
                   <span className="font-medium text-xs">
-                    {gymClass.schedule}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <TrendingUp className="h-4 w-4" />
-                    Upcoming
-                  </span>
-                  <span className="font-medium">
-                    {gymClass.upcomingSessions} sessions
+                    {gymClass.time}
                   </span>
                 </div>
               </div>
@@ -116,19 +79,19 @@ const TrainerClassesView = () => {
                   <div
                     className="h-full bg-accent transition-all"
                     style={{
-                      width: `${(gymClass.enrolledStudents / gymClass.capacity) * 100}%`,
+                      width: `${(gymClass.assignedCount / gymClass.capacity) * 100}%`,
                     }}
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground text-center">
-                  {Math.round((gymClass.enrolledStudents / gymClass.capacity) * 100)}%
+                  {Math.round((gymClass.assignedCount / gymClass.capacity) * 100)}%
                   full
                 </p>
               </div>
 
               <Button variant="outline" className="w-full" onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/trainer/classes/${gymClass.id}/roster`);
+                navigate(`/trainer/classes/${gymClass.classID}/roster`);
               }}>
                 <BookOpen className="mr-2 h-4 w-4" />
                 View Roster
@@ -138,7 +101,7 @@ const TrainerClassesView = () => {
         ))}
       </div>
 
-      {myClasses.length === 0 && (
+      {myClasses?.length === 0 && (
         <Card className="shadow-card">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Users className="h-16 w-16 text-muted-foreground opacity-20 mb-4" />
