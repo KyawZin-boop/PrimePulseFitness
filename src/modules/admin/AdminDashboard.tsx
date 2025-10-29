@@ -13,61 +13,113 @@ import {
   TrendingUp,
   Activity,
   ShoppingCart,
+  Loader2,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getAllUsers } from "@/api/user";
+import { getAllTrainers } from "@/api/trainer";
+import { getAllBookings } from "@/api/bookings";
+import { getAllProducts } from "@/api/products";
+import { getAllClasses } from "@/api/classes";
+import { useNavigate } from "react-router-dom";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 const AdminDashboard = () => {
-  // Mock data - replace with API calls
+  const navigate = useNavigate();
+
+  // Fetch all data
+  const usersQuery = getAllUsers.useQuery();
+  const trainersQuery = getAllTrainers.useQuery();
+  const bookingsQuery = getAllBookings.useQuery();
+  const productsQuery = getAllProducts.useQuery();
+  const classesQuery = getAllClasses.useQuery();
+
+  const users = usersQuery.data || [];
+  const trainers = trainersQuery.data || [];
+  const bookings = bookingsQuery.data || [];
+  const products = productsQuery.data || [];
+  const classes = classesQuery.data || [];
+
+  // Calculate statistics
+  const activeBookings = bookings.filter(b => b.activeFlag && b.status.toLowerCase() === "approved").length;
+  const pendingBookings = bookings.filter(b => b.activeFlag && b.status.toLowerCase() === "pending").length;
+  const activeUsers = users.filter(u => u.activeFlag).length;
+  const subscribedUsers = users.filter(u => u.subscriptionStatus).length;
+  
+  // Calculate recent growth (users created in last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const newUsersThisMonth = users.filter(u => new Date(u.createdAt) > thirtyDaysAgo).length;
+  const newTrainersThisMonth = trainers.filter(t => new Date(t.createdAt) > thirtyDaysAgo).length;
+
   const stats = {
-    totalUsers: 1248,
-    totalTrainers: 42,
-    monthlyRevenue: 87500,
-    activeSessions: 156,
-    newUsersThisMonth: 89,
-    newTrainersThisMonth: 5,
-    revenueGrowth: 12.5,
-    activeBookings: 234,
+    totalUsers: users.length,
+    totalTrainers: trainers.length,
+    totalProducts: products.length,
+    totalClasses: classes.length,
+    activeBookings,
+    pendingBookings,
+    newUsersThisMonth,
+    newTrainersThisMonth,
+    activeUsers,
+    subscribedUsers,
   };
 
-  const recentActivity = [
-    {
-      id: "1",
-      type: "user",
-      message: "New user registered: John Doe",
-      time: "5 minutes ago",
-    },
-    {
-      id: "2",
-      type: "booking",
-      message: "New booking: HIIT Cardio Blast",
-      time: "12 minutes ago",
-    },
-    {
-      id: "3",
-      type: "trainer",
-      message: "Trainer application submitted: Sarah Williams",
-      time: "1 hour ago",
-    },
-    {
-      id: "4",
-      type: "order",
-      message: "New order placed: Premium Food Box",
-      time: "2 hours ago",
-    },
-    {
-      id: "5",
-      type: "revenue",
-      message: "Payment received: $250 from Alex Johnson",
-      time: "3 hours ago",
-    },
-  ];
+  // Prepare chart data - User growth over last 7 days
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    return date;
+  });
 
-  const pendingActions = [
-    { id: "1", action: "Review 3 trainer applications", priority: "high" },
-    { id: "2", action: "Approve 5 pending refund requests", priority: "medium" },
-    { id: "3", action: "Update class schedules for next month", priority: "low" },
-    { id: "4", action: "Respond to 8 support tickets", priority: "high" },
-  ];
+  const userGrowthData = last7Days.map(date => {
+    const dayStart = new Date(date.setHours(0, 0, 0, 0));
+    const dayEnd = new Date(date.setHours(23, 59, 59, 999));
+    const count = users.filter(u => {
+      const createdAt = new Date(u.createdAt);
+      return createdAt >= dayStart && createdAt <= dayEnd;
+    }).length;
+    
+    return {
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      users: count,
+    };
+  });
+
+  // Booking status distribution
+  const bookingStatusData = [
+    { name: 'Approved', value: activeBookings, color: '#22c55e' },
+    { name: 'Pending', value: pendingBookings, color: '#eab308' },
+    { name: 'Rejected', value: bookings.filter(b => b.status.toLowerCase() === "rejected").length, color: '#ef4444' },
+  ].filter(item => item.value > 0);
+
+  // Class capacity data
+  const classCapacityData = classes.slice(0, 5).map(c => ({
+    name: c.className.length > 15 ? c.className.substring(0, 15) + '...' : c.className,
+    enrolled: c.assignedCount || 0,
+    capacity: c.capacity,
+    available: c.capacity - (c.assignedCount || 0),
+  }));
+
+  const COLORS = ['#22c55e', '#eab308', '#ef4444', '#3b82f6', '#8b5cf6'];
+
+  const isLoading = usersQuery.isLoading || trainersQuery.isLoading || 
+                    bookingsQuery.isLoading || productsQuery.isLoading || classesQuery.isLoading;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -78,174 +130,265 @@ const AdminDashboard = () => {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            <p className="text-xs text-green-600 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              +{stats.newUsersThisMonth} this month
-            </p>
-          </CardContent>
-        </Card>
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-accent mr-2" />
+          <span>Loading dashboard data...</span>
+        </div>
+      )}
 
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Trainers</CardTitle>
-            <UserCog className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTrainers}</div>
-            <p className="text-xs text-green-600 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              +{stats.newTrainersThisMonth} this month
-            </p>
-          </CardContent>
-        </Card>
+      {!isLoading && (
+        <>
+          {/* Stats Grid */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <Users className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +{stats.newUsersThisMonth} this month
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.activeUsers} active • {stats.subscribedUsers} subscribed
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Monthly Revenue
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${stats.monthlyRevenue.toLocaleString()}
-            </div>
-            <p className="text-xs text-green-600 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              +{stats.revenueGrowth}% from last month
-            </p>
-          </CardContent>
-        </Card>
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Trainers</CardTitle>
+                <UserCog className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalTrainers}</div>
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +{stats.newTrainersThisMonth} this month
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Sessions
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeSessions}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.activeBookings} bookings pending
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Products
+                </CardTitle>
+                <Package className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalProducts}</div>
+                <p className="text-xs text-muted-foreground">
+                  Available in store
+                </p>
+              </CardContent>
+            </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3 mb-8">
-        {/* Quick Actions */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common administrative tasks</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button variant="outline" className="w-full justify-start">
-              <Users className="mr-2 h-4 w-4" />
-              Manage Users
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <UserCog className="mr-2 h-4 w-4" />
-              Review Trainer Applications
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Calendar className="mr-2 h-4 w-4" />
-              Create New Class
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <DollarSign className="mr-2 h-4 w-4" />
-              View Revenue Report
-            </Button>
-          </CardContent>
-        </Card>
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Active Bookings
+                </CardTitle>
+                <Calendar className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.activeBookings}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.pendingBookings} pending approval
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Recent Activity */}
-        <Card className="shadow-card lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Recent Activity
-            </CardTitle>
-            <CardDescription>Latest platform updates</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentActivity.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start gap-3 rounded-lg border bg-gradient-card p-3"
+          {/* Charts Section */}
+          <div className="grid gap-6 lg:grid-cols-2 mb-8">
+            {/* User Growth Chart */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>User Growth (Last 7 Days)</CardTitle>
+                <CardDescription>New user registrations per day</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={userGrowthData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="users" stroke="#6366f1" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Booking Status Distribution */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>Booking Status Distribution</CardTitle>
+                <CardDescription>Current booking statuses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={bookingStatusData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(entry: any) => `${entry.name} ${((entry.percent || 0) * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {bookingStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Class Capacity Chart */}
+          <Card className="shadow-card mb-8">
+            <CardHeader>
+              <CardTitle>Class Enrollment Overview</CardTitle>
+              <CardDescription>Current enrollment vs capacity for top classes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={classCapacityData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="enrolled" fill="#22c55e" name="Enrolled" />
+                  <Bar dataKey="available" fill="#e5e7eb" name="Available" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Quick Actions */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>Common administrative tasks</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/users')}
                 >
-                  <div
-                    className={`mt-1 h-2 w-2 rounded-full ${
-                      activity.type === "user"
-                        ? "bg-blue-500"
-                        : activity.type === "booking"
-                        ? "bg-green-500"
-                        : activity.type === "trainer"
-                        ? "bg-purple-500"
-                        : activity.type === "order"
-                        ? "bg-orange-500"
-                        : "bg-yellow-500"
-                    }`}
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm">{activity.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {activity.time}
-                    </p>
+                  <Users className="mr-2 h-4 w-4" />
+                  Manage Users ({stats.totalUsers})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/trainers')}
+                >
+                  <UserCog className="mr-2 h-4 w-4" />
+                  Manage Trainers ({stats.totalTrainers})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/classes')}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Manage Classes ({stats.totalClasses})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/products')}
+                >
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Manage Products ({stats.totalProducts})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/bookings')}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  View Bookings ({stats.activeBookings})
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Platform Overview */}
+            <Card className="shadow-card lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Platform Overview
+                </CardTitle>
+                <CardDescription>Key metrics and statistics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg border bg-gradient-card p-4">
+                    <div>
+                      <p className="text-sm font-medium">Total Classes</p>
+                      <p className="text-2xl font-bold">{stats.totalClasses}</p>
+                    </div>
+                    <Calendar className="h-8 w-8 text-accent" />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-lg border bg-gradient-card p-4">
+                      <p className="text-xs text-muted-foreground">Active Users</p>
+                      <p className="text-xl font-bold">{stats.activeUsers}</p>
+                      <p className="text-xs text-green-600">
+                        {((stats.activeUsers / stats.totalUsers) * 100).toFixed(1)}% of total
+                      </p>
+                    </div>
+                    
+                    <div className="rounded-lg border bg-gradient-card p-4">
+                      <p className="text-xs text-muted-foreground">Subscribed Users</p>
+                      <p className="text-xl font-bold">{stats.subscribedUsers}</p>
+                      <p className="text-xs text-blue-600">
+                        {((stats.subscribedUsers / stats.totalUsers) * 100).toFixed(1)}% of total
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border bg-gradient-card p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium">Booking Overview</p>
+                      <DollarSign className="h-5 w-5 text-accent" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total</p>
+                        <p className="text-lg font-bold">{bookings.length}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Active</p>
+                        <p className="text-lg font-bold text-green-600">{stats.activeBookings}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Pending</p>
+                        <p className="text-lg font-bold text-yellow-600">{stats.pendingBookings}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Pending Actions */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle>Pending Actions</CardTitle>
-          <CardDescription>Items requiring your attention</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {pendingActions.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-lg border bg-gradient-card p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`h-2 w-2 rounded-full ${
-                      item.priority === "high"
-                        ? "bg-red-500"
-                        : item.priority === "medium"
-                        ? "bg-yellow-500"
-                        : "bg-green-500"
-                    }`}
-                  />
-                  <span className="text-sm font-medium">{item.action}</span>
-                </div>
-                <Button size="sm">Review</Button>
-              </div>
-            ))}
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </>
+      )}
     </div>
   );
 };

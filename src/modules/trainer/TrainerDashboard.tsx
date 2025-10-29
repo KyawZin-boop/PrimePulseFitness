@@ -13,11 +13,13 @@ import {
   TrendingUp,
   Users,
   CheckCircle,
-  AlertCircle,
   MessageCircle,
   Dumbbell,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import api from "@/api";
+import useAuth from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface DashboardStat {
   title: string;
@@ -29,119 +31,188 @@ interface DashboardStat {
 
 const TrainerDashboard = () => {
   const navigate = useNavigate();
+  const { userCredentials } = useAuth();
 
-  // Mock data - replace with API calls
+  // Get trainer data
+  const { data: trainerData } = api.trainers.getTrainerData.useQuery(
+    userCredentials?.userId || "",
+    { enabled: !!userCredentials?.userId }
+  );
+
+  // Get trainer's classes
+  const { data: trainerClasses } = api.classes.getClassesByTrainerId.useQuery(
+    trainerData?.trainerID || "",
+    { enabled: !!trainerData?.trainerID }
+  );
+
+  // Get bookings
+  const { data: bookings } = api.bookings.getBookingsByTrainerId.useQuery(
+    trainerData?.trainerID || "",
+    { enabled: !!trainerData?.trainerID }
+  );
+
+  // Get clients
+  const { data: clients } = api.trainers.getClient.useQuery(
+    trainerData?.trainerID || "",
+    { enabled: !!trainerData?.trainerID }
+  );
+
+  // Calculate stats
+  const totalClients = clients?.length || 0;
+  const pendingBookingsCount = bookings?.filter((b) => b.status === "Pending").length || 0;
+  
+  // Calculate monthly earnings
+  const calculateMonthlyEarnings = () => {
+    if (!bookings || !trainerClasses) return 0;
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    return bookings
+      .filter((b) => {
+        if (b.status !== "Approved") return false;
+        const bookingDate = new Date(b.createdAt);
+        return (
+          bookingDate.getMonth() === currentMonth &&
+          bookingDate.getFullYear() === currentYear
+        );
+      })
+      .reduce((total, booking) => {
+        const classInfo = trainerClasses.find((c) => c.classID === booking.classID);
+        return total + (classInfo?.price || 0);
+      }, 0);
+  };
+
+  const monthlyEarnings = calculateMonthlyEarnings();
+
+  // Stats for dashboard cards
   const stats: DashboardStat[] = [
     {
       title: "Total Clients",
-      value: 28,
-      change: "+4 this month",
+      value: totalClients,
+      change: `${totalClients} active`,
       icon: <Users className="h-5 w-5" />,
       color: "text-blue-500",
     },
     {
-      title: "Upcoming Sessions",
-      value: 12,
-      change: "Next 7 days",
+      title: "Active Classes",
+      value: trainerClasses?.length || 0,
+      change: "Your classes",
       icon: <Calendar className="h-5 w-5" />,
       color: "text-green-500",
     },
     {
       title: "Pending Bookings",
-      value: 5,
+      value: pendingBookingsCount,
       change: "Awaiting approval",
       icon: <Clock className="h-5 w-5" />,
       color: "text-yellow-500",
     },
     {
       title: "Monthly Earnings",
-      value: "$3,240",
-      change: "+12% from last month",
+      value: `$${monthlyEarnings}`,
+      change: "This month",
       icon: <DollarSign className="h-5 w-5" />,
       color: "text-accent",
     },
   ];
 
-  const upcomingSessions = [
-    {
-      id: "1",
-      class: "Strength Forge",
-      date: "Oct 6, 2025",
-      time: "09:00 AM",
-      duration: "60 min",
-      participants: 8,
-      capacity: 15,
-      type: "private" as const,
-    },
-    {
-      id: "2",
-      class: "Cardio Surge",
-      date: "Oct 6, 2025",
-      time: "02:00 PM",
-      duration: "60 min",
-      participants: 12,
-      capacity: 20,
-      type: "free" as const,
-    },
-    {
-      id: "3",
-      class: "Mind & Body Reset",
-      date: "Oct 7, 2025",
-      time: "10:00 AM",
-      duration: "45 min",
-      participants: 6,
-      capacity: 10,
-      type: "private" as const,
-    },
-  ];
+  // Get upcoming sessions (next 7 days)
+  const getUpcomingSessions = () => {
+    if (!trainerClasses) return [];
+    
+    return trainerClasses.slice(0, 3).map((classItem) => {
+      const approvedCount = bookings?.filter(
+        (b) => b.classID === classItem.classID && b.status === "Approved"
+      ).length || 0;
 
+      return {
+        id: classItem.classID,
+        class: classItem.className,
+        date: "Recurring",
+        time: classItem.time,
+        duration: `${classItem.duration} min`,
+        participants: approvedCount,
+        capacity: classItem.capacity,
+        type: classItem.price > 0 ? ("private" as const) : ("free" as const),
+      };
+    });
+  };
+
+  const upcomingSessions = getUpcomingSessions();
+
+  // Get pending bookings
+  const getPendingBookings = () => {
+    if (!bookings) return [];
+    
+    return bookings
+      .filter((b) => b.status === "Pending")
+      .slice(0, 3)
+      .map((booking) => ({
+        id: booking.bookingID,
+        clientName: booking.userName,
+        class: booking.className,
+        date: new Date(booking.createdAt).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        }),
+        time: booking.time,
+        type: "private",
+      }));
+  };
+
+  const pendingBookings = getPendingBookings();
+
+  // Mutation for updating booking status
+  const updateStatusMutation = api.trainers.updateBookingStatus.useMutation({
+    onSuccess: (_, variables) => {
+      const action = variables.status === "Approved" ? "approved" : "rejected";
+      toast.success(`Booking ${action} successfully`);
+      // Optionally refetch bookings
+    },
+    onError: () => {
+      toast.error("Failed to update booking status");
+    },
+  });
+
+  const handleApproveBooking = (bookingId: string) => {
+    updateStatusMutation.mutate({ bookingId, status: "Approved" });
+  };
+
+  const handleRejectBooking = (bookingId: string) => {
+    updateStatusMutation.mutate({ bookingId, status: "Rejected" });
+  };
+
+  // Recent activity (mock for now - can be enhanced with real data)
   const recentActivity = [
     {
       id: "1",
       type: "booking",
-      message: "New booking request from Alex Johnson for Strength Forge",
-      time: "2 hours ago",
+      message: `${pendingBookingsCount} new booking request${pendingBookingsCount !== 1 ? 's' : ''}`,
+      time: "Recent",
       icon: <CheckCircle className="h-4 w-4 text-green-500" />,
     },
     {
       id: "2",
-      type: "message",
-      message: "Sarah Williams sent you a message",
-      time: "4 hours ago",
-      icon: <MessageCircle className="h-4 w-4 text-blue-500" />,
+      type: "clients",
+      message: `${totalClients} active client${totalClients !== 1 ? 's' : ''}`,
+      time: "Active",
+      icon: <Users className="h-4 w-4 text-blue-500" />,
     },
     {
       id: "3",
-      type: "progress",
-      message: "Client Mike Chen updated progress: -2kg weight loss",
-      time: "Yesterday",
+      type: "earnings",
+      message: `$${monthlyEarnings} earned this month`,
+      time: "This month",
       icon: <TrendingUp className="h-4 w-4 text-accent" />,
     },
     {
       id: "4",
-      type: "alert",
-      message: "Session 'Cardio Surge' is almost full (18/20)",
-      time: "Yesterday",
-      icon: <AlertCircle className="h-4 w-4 text-yellow-500" />,
-    },
-  ];
-
-  const pendingBookings = [
-    {
-      id: "1",
-      clientName: "Alex Johnson",
-      class: "Strength Forge",
-      date: "Oct 8, 2025",
-      time: "09:00 AM",
-      type: "private",
-    },
-    {
-      id: "2",
-      clientName: "Emma Davis",
-      class: "Mind & Body Reset",
-      date: "Oct 9, 2025",
-      time: "10:00 AM",
-      type: "private",
+      type: "classes",
+      message: `${trainerClasses?.length || 0} active classes`,
+      time: "Teaching",
+      icon: <Dumbbell className="h-4 w-4 text-yellow-500" />,
     },
   ];
 
@@ -346,10 +417,21 @@ const TrainerDashboard = () => {
                       {booking.date} at {booking.time}
                     </p>
                     <div className="mt-2 flex gap-2">
-                      <Button size="sm" className="flex-1">
+                      <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleApproveBooking(booking.id)}
+                        disabled={updateStatusMutation.isPending}
+                      >
                         Approve
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => handleRejectBooking(booking.id)}
+                        disabled={updateStatusMutation.isPending}
+                      >
                         Reject
                       </Button>
                     </div>

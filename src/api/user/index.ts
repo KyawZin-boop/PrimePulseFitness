@@ -5,7 +5,7 @@ import {
   useQuery,
   QueryOptions,
 } from "@tanstack/react-query";
-import { User } from "./type";
+import { UpdateUser, User } from "./type";
 
 const BASE_URL = "User";
 
@@ -58,6 +58,21 @@ export const activateUser = {
       mutationFn: async (userId) => {
         const request = await axios.post(`${BASE_URL}/ActivateUser/${userId}`);
         return request.data;
+      },
+      ...opt,
+    });
+  },
+};
+
+export const updateUser = {
+  useMutation: (
+    opt?: Partial<UseMutationOptions<null, Error, UpdateUser>>
+  ) => {
+    return useMutation<null, Error, UpdateUser>({
+      mutationFn: async (payload) => {
+        const response = await axios.post(`${BASE_URL}/UpdateUser`, payload);
+
+        return response.data;
       },
       ...opt,
     });

@@ -44,7 +44,7 @@ const TrainerClassesView = () => {
           <Card
             key={gymClass.classID}
             className="cursor-pointer shadow-card transition hover:shadow-athletic"
-            onClick={() => navigate(`/trainer/classes/${gymClass.classID}`)}
+            onClick={() => navigate(`/trainer/classes/${gymClass.classID}/roster`)}
           >
             <CardHeader>
               <CardTitle>{gymClass.className}</CardTitle>

@@ -30,7 +30,7 @@ export const getReviewsByTarget = {
 export const getUserReviews = {
   queryKey: ["getUserReviews"],
   queryFn: async () => {
-    const { data } = await axios.get<Review[]>(`${BASE_URL}/user`);
+    const { data } = await axios.get<Review[]>(`${BASE_URL}/GetAllReviews`);
     return data;
   },
   useQuery: (opt?: Partial<UseQueryOptions<Review[], Error>>) =>

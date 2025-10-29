@@ -13,12 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Apple, DollarSign, Flame, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
+import { Apple, DollarSign, Flame, Target, TrendingDown, TrendingUp, Utensils, LogIn } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { DietPlan, DietPlanType } from "@/types";
 import { toast } from "sonner";
+import useAuth from "@/hooks/useAuth";
 
 const DietPlansView = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<DietPlan | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<DietPlanType | "all">(
     "all"
@@ -154,6 +158,45 @@ const DietPlansView = () => {
         return null;
     }
   };
+
+  // If user is not logged in, show login prompt
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto py-8 px-4 pt-20">
+        <div className="mb-8">
+          <h1 className="text-heading mb-2">Diet Plans</h1>
+          <p className="text-muted-foreground">
+            Personalized nutrition plans to fuel your fitness journey
+          </p>
+        </div>
+
+        <Card className="shadow-card max-w-2xl mx-auto">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent/10 mb-6">
+              <Apple className="h-10 w-10 text-accent" />
+            </div>
+            <h3 className="font-semibold text-xl mb-2">Login Required</h3>
+            <p className="text-muted-foreground text-center mb-6 max-w-md">
+              Please log in to access personalized diet plans and nutrition guidance
+            </p>
+            <div className="flex gap-3">
+              <Button onClick={() => navigate("/auth/login")} size="lg">
+                <LogIn className="mr-2 h-5 w-5" />
+                Login
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/trainers")} 
+                size="lg"
+              >
+                Browse Trainers
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">

@@ -27,58 +27,69 @@ const Products = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {products &&
-            products.map((product) => (
-              <Card
-                key={product.productID}
-                className="bg-gradient-card pt-0 border-0 shadow-card hover:shadow-athletic transition-athletic group overflow-hidden"
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-athletic"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <span className="bg-accent text-accent-foreground text-xs font-bold px-2 py-1 rounded-full">
-                      {product.categoryName}
-                    </span>
-                  </div>
-                </div>
-
-                <CardHeader className="pb-3 flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <CardTitle className="text-lg font-bold">
-                      {product.name}
-                    </CardTitle>
-                    <div className="flex gap-1">
-                      <Star className="h-4 w-4 fill-accent text-accent" />
-                      <span className="text-sm font-medium">
-                        {product.rating}
+            products.map((product) => {
+              const discountedPrice = product.sellingPrice * (1 - product.discount / 100);
+              return (
+                <Card
+                  key={product.productID}
+                  className="bg-gradient-card pt-0 border-0 shadow-card hover:shadow-athletic transition-athletic group overflow-hidden"
+                >
+                  <div className="relative overflow-hidden">
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-athletic"
+                    />
+                    <div className="absolute top-4 left-4">
+                      <span className="bg-accent text-accent-foreground text-xs font-bold px-2 py-1 rounded-full">
+                        {product.categoryName}
                       </span>
                     </div>
+                    {product.discount > 0 && (
+                      <span className="absolute top-4 right-4 bg-accent text-white text-xs font-bold px-2 py-1 rounded-full shadow">
+                        -{product.discount}%
+                      </span>
+                    )}
                   </div>
-                  <CardDescription className="text-sm">
-                    {product.description}
-                  </CardDescription>
-                </CardHeader>
 
-                <CardFooter className="flex flex-col pt-0">
-                  <div className="text-md font-black text-primary text-left mb-2 w-full">
-                    <span className="text-accent text-sm">Price - </span>
-                    <span>{product.sellingPrice.toFixed(0)} Kyat</span>
-                  </div>
-                  <Button
-                    variant="athletic"
-                    size="sm"
-                    className="group w-full"
-                    onClick={() => navigate("/shop")}
-                  >
-                    <ShoppingCart className="mr-2 h-4 w-4 group-hover:scale-110 transition-athletic" />
-                    Go to Shop
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                  <CardHeader className="pb-3 flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <CardTitle className="text-lg font-bold">
+                        {product.name}
+                      </CardTitle>
+                      <div className="flex gap-1">
+                        <Star className="h-4 w-4 fill-accent text-accent" />
+                        <span className="text-sm font-medium">
+                          {product.rating}
+                        </span>
+                      </div>
+                    </div>
+                    <CardDescription className="text-sm">
+                      {product.description}
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardFooter className="flex flex-col pt-0">
+                    <div className="text-md font-black text-primary text-left mb-2 w-full flex items-center gap-2">
+                      <span className="text-accent text-sm">Price - </span>
+                      {product.discount > 0 && (
+                        <span className="text-base text-muted-foreground line-through">${product.sellingPrice.toFixed(2)}</span>
+                      )}
+                      <span>${discountedPrice.toFixed(2)}</span>
+                    </div>
+                    <Button
+                      variant="athletic"
+                      size="sm"
+                      className="group w-full"
+                      onClick={() => {navigate("/shop"); window.scrollTo({ top: 0, behavior: 'smooth' });}}
+                    >
+                      <ShoppingCart className="mr-2 h-4 w-4 group-hover:scale-110 transition-athletic" />
+                      Go to Shop
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
         </div>
 
         <div className="text-center">

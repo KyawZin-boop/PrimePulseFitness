@@ -1,6 +1,5 @@
 import axios from "@/configs/axios";
 import {
-  QueryOptions,
   useMutation,
   UseMutationOptions,
   useQuery,
@@ -139,7 +138,7 @@ export const activateTrainer = {
 };
 
 export const getTrainerById = {
-  useQuery: (trainerId: string, opt?: QueryOptions<Trainer>) =>
+  useQuery: (trainerId: string, opt?: Partial<UseQueryOptions<Trainer, Error>>) =>
     useQuery<Trainer, Error>({
       queryKey: ["getTrainerById", trainerId],
       queryFn: async () => {
@@ -148,6 +147,7 @@ export const getTrainerById = {
           .then((res) => res.data);
         return response.data;
       },
+      enabled: !!trainerId,
       ...opt,
     }),
 };

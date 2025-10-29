@@ -10,57 +10,167 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Camera,
-  Dumbbell,
+  Apple,
   Save,
-  Target,
-  TrendingUp,
+  Dumbbell,
   User as UserIcon,
+  LogIn,
+  Calendar,
 } from "lucide-react";
-import { useState } from "react";
-import type { User } from "@/types";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import useAuth from "@/hooks/useAuth";
+import api from "@/api";
+import { toast } from "sonner";
 
 const UserProfileView = () => {
-  // Mock user data - replace with actual API call
-  const [user, setUser] = useState<User>({
-    id: "1",
-    name: "Alex Johnson",
-    email: "alex.johnson@example.com",
-    role: "user",
-    profilePhoto: undefined,
-    age: 28,
-    gender: "male",
-    height: 175,
-    weight: 75,
-    fitnessGoals: ["Weight Loss", "Muscle Gain"],
-    preferences: ["Strength Training", "Cardio"],
-    subscriptionStatus: "active",
-    subscriptionPlan: "Premium Monthly",
-    membershipExpiry: new Date("2025-11-01"),
-    createdAt: new Date("2024-01-15"),
-    lastWeightUpdate: new Date("2025-10-01"),
-    totalWorkouts: 48,
+  const navigate = useNavigate();
+  const { isAuthenticated, userCredentials } = useAuth();
+  const userId = userCredentials?.userId || "";
+
+  // Get user data from API
+  const { data: user, isLoading, refetch } = api.user.getUserById.useQuery(userId);
+
+  // Update user mutation
+  const updateUserMutation = api.user.updateUser.useMutation({
+    onSuccess: () => {
+      toast.success("Profile updated successfully");
+      setIsEditing(false);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error("Failed to update profile");
+      console.error("Update error:", error);
+    },
+  });
+
+  // Upload file mutation
+  const uploadFileMutation = api.files.uploadFile.useMutation({
+    onSuccess: (fileUrl) => {
+      toast.dismiss();
+      // After successful upload, update user with new image URL
+      if (user) {
+        updateUserMutation.mutate({
+          userID: user.userID,
+          name: editedUser.name || user.name,
+          email: editedUser.email || user.email,
+          age: editedUser.age !== null ? editedUser.age : user.age,
+          gender: editedUser.gender || user.gender,
+          imageUrl: fileUrl, // Use the returned file URL
+        });
+      }
+    },
+    onError: (error) => {
+      toast.dismiss();
+      toast.error("Failed to upload photo");
+      console.error("Upload error:", error);
+    },
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [editedUser, setEditedUser] = useState({
+    name: "",
+    email: "",
+    age: null as number | null,
+    gender: null as string | null,
+  });
+
+  // Update editedUser when user data loads or changes
+  useEffect(() => {
+    if (user) {
+      setEditedUser({
+        name: user.name,
+        email: user.email,
+        age: user.age,
+        gender: user.gender,
+      });
+    }
+  }, [user]);
 
   const handleSave = () => {
-    // API call to save user profile
-    setIsEditing(false);
+    if (!user) return;
+
+    updateUserMutation.mutate({
+      userID: user.userID,
+      name: editedUser.name,
+      email: editedUser.email,
+      age: editedUser.age,
+      gender: editedUser.gender,
+      imageUrl: user.imageUrl,
+    });
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUser({ ...user, profilePhoto: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please select a valid image file");
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size must be less than 5MB");
+        return;
+      }
+
+      toast.loading("Uploading photo...");
+      uploadFileMutation.mutate(file);
     }
   };
 
+  // If user is not logged in, show login prompt
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto py-8 px-4 pt-20">
+        <div className="mb-8">
+          <h1 className="text-heading mb-2">My Profile</h1>
+          <p className="text-muted-foreground">
+            Manage your personal information and fitness journey
+          </p>
+        </div>
+
+        <Card className="shadow-card max-w-2xl mx-auto">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent/10 mb-6">
+              <UserIcon className="h-10 w-10 text-accent" />
+            </div>
+            <h3 className="font-semibold text-xl mb-2">Login Required</h3>
+            <p className="text-muted-foreground text-center mb-6 max-w-md">
+              Please log in to view and manage your profile
+            </p>
+            <div className="flex gap-3">
+              <Button onClick={() => navigate("/auth/login")} size="lg">
+                <LogIn className="mr-2 h-5 w-5" />
+                Login
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/")} 
+                size="lg"
+              >
+                Go Home
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading || !user) {
+    return (
+      <div className="container mx-auto py-8 px-4 pt-24">
+        <div className="text-center py-16">
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 pt-24">
       <div className="mb-8">
         <h1 className="text-heading mb-2">My Profile</h1>
         <p className="text-muted-foreground">
@@ -73,9 +183,9 @@ const UserProfileView = () => {
         <Card className="h-fit shadow-card">
           <CardHeader className="text-center">
             <div className="relative mx-auto mb-4 h-40 w-40">
-              {user.profilePhoto ? (
+              {user.imageUrl ? (
                 <img
-                  src={user.profilePhoto}
+                  src={user.imageUrl}
                   alt="Profile"
                   className="h-full w-full rounded-full object-cover"
                 />
@@ -102,14 +212,25 @@ const UserProfileView = () => {
             <CardDescription>{user.email}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg bg-accent/10 p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-accent">
-                <TrendingUp className="h-4 w-4" />
-                Subscription
+            {user.subscriptionStatus && (
+              <div className="rounded-lg bg-accent/10 p-4">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-accent">
+                  <Calendar className="h-4 w-4" />
+                  Subscription
+                </div>
+                <p className="text-sm font-medium">
+                  {user.subscriptionPlan || "Active Membership"}
+                </p>
+                <p className="text-xs text-muted-foreground">Status: Active</p>
               </div>
-              <p className="text-sm font-medium">{user.subscriptionPlan}</p>
-              <p className="text-xs text-muted-foreground">
-                Expires: {user.membershipExpiry?.toLocaleDateString()}
+            )}
+            <div className="rounded-lg bg-secondary/50 p-4">
+              <div className="text-xs text-muted-foreground mb-2">Member Since</div>
+              <p className="text-sm font-medium">
+                {new Date(user.createdAt).toLocaleDateString('en-US', {
+                  month: 'long',
+                  year: 'numeric'
+                })}
               </p>
             </div>
           </CardContent>
@@ -146,8 +267,8 @@ const UserProfileView = () => {
                   <Label htmlFor="name">Full Name</Label>
                   <Input
                     id="name"
-                    value={user.name}
-                    onChange={(e) => setUser({ ...user, name: e.target.value })}
+                    value={isEditing ? editedUser.name : user.name}
+                    onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
                     disabled={!isEditing}
                   />
                 </div>
@@ -156,8 +277,8 @@ const UserProfileView = () => {
                   <Input
                     id="email"
                     type="email"
-                    value={user.email}
-                    onChange={(e) => setUser({ ...user, email: e.target.value })}
+                    value={isEditing ? editedUser.email : user.email}
+                    onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
                     disabled={!isEditing}
                   />
                 </div>
@@ -166,23 +287,21 @@ const UserProfileView = () => {
                   <Input
                     id="age"
                     type="number"
-                    value={user.age || ""}
+                    value={isEditing ? (editedUser.age || "") : (user.age || "")}
                     onChange={(e) =>
-                      setUser({ ...user, age: parseInt(e.target.value) })
+                      setEditedUser({ ...editedUser, age: e.target.value ? parseInt(e.target.value) : null })
                     }
                     disabled={!isEditing}
+                    placeholder="Enter your age"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gender">Gender</Label>
                   <select
                     id="gender"
-                    value={user.gender || ""}
+                    value={isEditing ? (editedUser.gender || "") : (user.gender || "")}
                     onChange={(e) =>
-                      setUser({
-                        ...user,
-                        gender: e.target.value as "male" | "female" | "other",
-                      })
+                      setEditedUser({ ...editedUser, gender: e.target.value || null })
                     }
                     disabled={!isEditing}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
@@ -193,116 +312,64 @@ const UserProfileView = () => {
                     <option value="other">Other</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="height">Height (cm)</Label>
-                  <Input
-                    id="height"
-                    type="number"
-                    value={user.height || ""}
-                    onChange={(e) =>
-                      setUser({ ...user, height: parseInt(e.target.value) })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Weight (kg)</Label>
-                  <Input
-                    id="weight"
-                    type="number"
-                    value={user.weight || ""}
-                    onChange={(e) =>
-                      setUser({ ...user, weight: parseInt(e.target.value) })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Fitness Goals */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-accent" />
-                Fitness Goals & Preferences
-              </CardTitle>
-              <CardDescription>
-                Your fitness objectives and training preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Current Goals</Label>
-                <div className="flex flex-wrap gap-2">
-                  {user.fitnessGoals?.map((goal) => (
-                    <span
-                      key={goal}
-                      className="rounded-full bg-accent/10 px-3 py-1 text-sm font-medium text-accent"
-                    >
-                      {goal}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Training Preferences</Label>
-                <div className="flex flex-wrap gap-2">
-                  {user.preferences?.map((pref) => (
-                    <span
-                      key={pref}
-                      className="rounded-full bg-secondary px-3 py-1 text-sm font-medium"
-                    >
-                      {pref}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Progress Overview */}
+          {/* Assigned Plans */}
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Dumbbell className="h-5 w-5 text-accent" />
-                Progress Overview
+                Assigned Programs
               </CardTitle>
-              <CardDescription>Your recent fitness activity</CardDescription>
+              <CardDescription>
+                Your current workout and diet plans
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-lg bg-gradient-card p-4">
-                  <div className="text-sm text-muted-foreground">
-                    Current Weight
-                  </div>
-                  <div className="text-2xl font-bold">{user.weight} kg</div>
-                  <div className="text-xs text-muted-foreground">
-                    Updated {user.lastWeightUpdate?.toLocaleDateString()}
-                  </div>
-                </div>
-                <div className="rounded-lg bg-gradient-card p-4">
-                  <div className="text-sm text-muted-foreground">
-                    Total Workouts
-                  </div>
-                  <div className="text-2xl font-bold">{user.totalWorkouts}</div>
-                  <div className="text-xs text-muted-foreground">
-                    This month: 12
+            <CardContent className="space-y-4">
+              {user.assignedWorkoutPlan && user.assignedWorkoutPlan.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Dumbbell className="h-4 w-4" />
+                    Workout Plans
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {user.assignedWorkoutPlan.map((plan, index) => (
+                      <span
+                        key={index}
+                        className="rounded-full bg-accent/10 px-3 py-1 text-sm font-medium text-accent"
+                      >
+                        {plan}
+                      </span>
+                    ))}
                   </div>
                 </div>
-                <div className="rounded-lg bg-gradient-card p-4">
-                  <div className="text-sm text-muted-foreground">
-                    Member Since
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {user.createdAt.getFullYear()}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {user.createdAt.toLocaleDateString()}
+              )}
+              {user.assignedDietPlan && user.assignedDietPlan.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Apple className="h-4 w-4" />
+                    Diet Plans
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {user.assignedDietPlan.map((plan, index) => (
+                      <span
+                        key={index}
+                        className="rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-600"
+                      >
+                        {plan}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
+              {(!user.assignedWorkoutPlan || user.assignedWorkoutPlan.length === 0) && 
+               (!user.assignedDietPlan || user.assignedDietPlan.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No plans assigned yet. Contact a trainer to get started!
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

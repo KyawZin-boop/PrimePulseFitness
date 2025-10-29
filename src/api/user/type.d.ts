@@ -4,17 +4,29 @@ export type User = {
   email: string;
   age: number | null;
   gender: string | null;
-  role: string;
-  isExternalLogin: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  imageUrl: string | null;
+  subscriptionStatus: boolean;
+  subscriptionPlan: string | null;
+  assignedDietPlan: string[];
+  assignedWorkoutPlan: string[];
+  createdAt: string;
+  updatedAt: string;
   activeFlag: boolean;
 };
 
 export type UserResponse = {
-    userID: string;
-    name: string;
-    email: string;
-    age: number | null;
-    gender: string | null;
+  userID: string;
+  name: string;
+  email: string;
+  age: number | null;
+  gender: string | null;
 }
+
+export type UpdateUser = {
+  userID: string;
+  name: string;
+  email: string;
+  age: number | null;
+  gender: string | null;
+  imageUrl: string | null;
+};

@@ -27,4 +27,5 @@ type TrainerPendingBooking = {
   capacity: number;
   assignedCount: number;
   status: string;
+  createdAt: string;
 };

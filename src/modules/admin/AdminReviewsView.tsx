@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,69 +8,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Star, MessageSquare, MoreVertical, Flag } from "lucide-react";
+import { Star, MessageSquare, MoreVertical, Flag, Loader2, MessageCircle, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
-
-interface Review {
-  id: string;
-  user: string;
-  trainer: string;
-  rating: number;
-  comment: string;
-  date: string;
-  status: "published" | "flagged" | "hidden";
-}
+import api from "@/api";
+import { useQueryClient } from "@tanstack/react-query";
 
 const AdminReviewsView = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const queryClient = useQueryClient();
 
-  const reviews: Review[] = [
-    {
-      id: "1",
-      user: "John Doe",
-      trainer: "Mike Johnson",
-      rating: 5,
-      comment: "Excellent trainer! Very knowledgeable and motivating.",
-      date: "2024-01-15",
-      status: "published",
-    },
-    {
-      id: "2",
-      user: "Sarah Smith",
-      trainer: "Emily Davis",
-      rating: 4,
-      comment: "Great sessions, but sometimes late to appointments.",
-      date: "2024-01-14",
-      status: "published",
-    },
-    {
-      id: "3",
-      user: "Mike Wilson",
-      trainer: "Mike Johnson",
-      rating: 1,
-      comment: "Inappropriate language during session. Very unprofessional.",
-      date: "2024-01-13",
-      status: "flagged",
-    },
-    {
-      id: "4",
-      user: "Emma Johnson",
-      trainer: "David Lee",
-      rating: 5,
-      comment: "Amazing results! Lost 15 pounds in 2 months.",
-      date: "2024-01-12",
-      status: "published",
-    },
-    {
-      id: "5",
-      user: "Alex Brown",
-      trainer: "Emily Davis",
-      rating: 3,
-      comment: "Decent trainer but nothing special.",
-      date: "2024-01-11",
-      status: "hidden",
-    },
-  ];
+  // Fetch all reviews using getUserReviews
+  const { data: reviews = [], isLoading } = api.reviews.getUserReviews.useQuery();
+  const deleteReviewMutation = api.reviews.deleteReview.useMutation();
 
   const handleFlagReview = (reviewId: string) => {
     toast.warning(`Review ${reviewId} has been flagged for moderation`);
@@ -85,23 +35,44 @@ const AdminReviewsView = () => {
   };
 
   const handleDeleteReview = (reviewId: string) => {
-    toast.success(`Review ${reviewId} has been deleted`);
+    if (!reviewId) {
+      toast.error("Invalid review ID");
+      return;
+    }
+
+    if (confirm("Are you sure you want to delete this review?")) {
+      deleteReviewMutation.mutate(reviewId, {
+        onSuccess: () => {
+          toast.success("Review deleted successfully");
+          queryClient.invalidateQueries({ queryKey: ["getUserReviews"] });
+          queryClient.invalidateQueries({ queryKey: ["getAllTrainers"] });
+          queryClient.invalidateQueries({ queryKey: ["getAllGymClasses"] });
+        },
+        onError: (error: any) => {
+          toast.error(error?.response?.data?.message ?? "Failed to delete review");
+        },
+      });
+    }
   };
 
   const filteredReviews = reviews.filter(
-    (review) =>
-      review.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      review.trainer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      review.comment.toLowerCase().includes(searchTerm.toLowerCase())
+    (review) => {
+      // Type filter
+      if (typeFilter !== "all" && review.type !== typeFilter) return false;
+      // Search filter
+      return (
+        review.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (review.receiverName?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        review.content.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
   );
 
   const stats = {
     total: reviews.length,
-    published: reviews.filter((r) => r.status === "published").length,
-    flagged: reviews.filter((r) => r.status === "flagged").length,
-    avgRating: (
-      reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-    ).toFixed(1),
+    avgRating: reviews.length > 0
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+      : "0.0",
   };
 
   return (
@@ -112,152 +83,195 @@ const AdminReviewsView = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4 mb-8">
-        <Card className="shadow-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Reviews
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Published
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.published}
+      <div className="grid gap-4 md:grid-cols-2 mb-8">
+        <Card className="shadow-card border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  Total Reviews
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-4xl font-bold text-blue-600 dark:text-blue-400">{stats.total}</h3>
+                  <span className="text-sm text-muted-foreground">reviews</span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <MessageCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Flagged
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {stats.flagged}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Rating
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.avgRating}/5</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search */}
-      <div className="mb-6">
-        <Input
-          placeholder="Search reviews by user, trainer, or content..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md"
-        />
-      </div>
-
-      {/* Reviews List */}
-      <div className="space-y-4">
-        {filteredReviews.map((review) => (
-          <Card
-            key={review.id}
-            className={`shadow-card ${
-              review.status === "flagged" ? "border-red-500 border-2" : ""
-            }`}
-          >
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-2">
-                    <div className="flex items-center gap-1">
+        <Card className="shadow-card border-l-4 border-l-yellow-500 bg-gradient-to-br from-yellow-50/50 to-transparent dark:from-yellow-950/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  Average Rating
+                </p>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-4xl font-bold text-yellow-600 dark:text-yellow-400">{stats.avgRating}</h3>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-0.5">
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
-                          className={`h-4 w-4 ${
-                            i < review.rating
+                          className={`h-3.5 w-3.5 ${
+                            i < Math.round(parseFloat(stats.avgRating))
                               ? "fill-yellow-400 text-yellow-400"
-                              : "text-gray-300"
+                              : "fill-gray-300 text-gray-300"
                           }`}
                         />
                       ))}
                     </div>
-                    <span className="font-semibold">{review.user}</span>
-                    <span className="text-muted-foreground">→</span>
-                    <span className="text-muted-foreground">
-                      Trainer: {review.trainer}
-                    </span>
-                  </div>
-
-                  <p className="text-gray-700 mb-2">{review.comment}</p>
-
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{review.date}</span>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        review.status === "published"
-                          ? "bg-green-100 text-green-700"
-                          : review.status === "flagged"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {review.status}
-                    </span>
+                    <span className="text-xs text-muted-foreground">out of 5</span>
                   </div>
                 </div>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => handleFlagReview(review.id)}
-                    >
-                      <Flag className="mr-2 h-4 w-4" />
-                      Flag Review
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleHideReview(review.id)}>
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Hide Review
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handlePublishReview(review.id)}
-                    >
-                      <Star className="mr-2 h-4 w-4" />
-                      Publish Review
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleDeleteReview(review.id)}
-                      className="text-red-600"
-                    >
-                      Delete Review
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Filter & Search */}
+      <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex gap-2 bg-secondary/50 rounded-lg p-2 shadow-sm">
+          <Button
+            variant={typeFilter === "all" ? "default" : "ghost"}
+            size="sm"
+            className={typeFilter === "all" ? "font-bold" : ""}
+            onClick={() => setTypeFilter("all")}
+          >
+            All
+          </Button>
+          <Button
+            variant={typeFilter === "trainer" ? "default" : "ghost"}
+            size="sm"
+            className={typeFilter === "trainer" ? "font-bold" : ""}
+            onClick={() => setTypeFilter("trainer")}
+          >
+            Trainer
+          </Button>
+          <Button
+            variant={typeFilter === "class" ? "default" : "ghost"}
+            size="sm"
+            className={typeFilter === "class" ? "font-bold" : ""}
+            onClick={() => setTypeFilter("class")}
+          >
+            Class
+          </Button>
+        </div>
+        <div className="relative w-full md:w-[340px]">
+          <Input
+            placeholder="Search reviews by user, trainer/class, or content..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 rounded-lg border border-input shadow-sm focus:ring-accent"
+          />
+          <span className="absolute left-3 top-2.5 text-muted-foreground">
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="8" cy="8" r="7"/><line x1="16" y1="16" x2="12" y2="12"/></svg>
+          </span>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      )}
+
+      {/* Reviews List */}
+      {!isLoading && (
+        <div className="space-y-4">
+          {filteredReviews.length === 0 ? (
+            <Card className="shadow-card">
+              <CardContent className="py-16 text-center">
+                <p className="text-muted-foreground">
+                  {searchTerm || typeFilter !== "all" ? "No reviews found matching your criteria" : "No reviews yet"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredReviews.map((review) => (
+              <Card key={review.reviewID} className="shadow-card border border-muted rounded-xl hover:shadow-lg transition-all">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-3 mb-2">
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${i < review.rating ? "fill-yellow-400 text-yellow-400 drop-shadow" : "text-gray-300"}`}
+                            />
+                          ))}
+                        </div>
+                        <span className="font-semibold text-base text-accent">{review.userName}</span>
+                        <span className="text-muted-foreground"></span>
+                        <span className="text-xs px-2 py-1 rounded-full bg-secondary/40 text-muted-foreground font-medium">
+                          {review.type === "trainer" ? "Trainer" : "Class"}
+                        </span>
+                        <span className="text-sm font-medium text-primary">
+                          {review.receiverName || "Unknown"}
+                        </span>
+                      </div>
+
+                      <p className="text-gray-700 mb-2 text-[15px] leading-relaxed border-l-4 border-accent pl-3 bg-secondary/10 rounded">
+                        {review.content}
+                      </p>
+
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                        {review.createdAt && (
+                          <span className="bg-secondary/30 px-2 py-1 rounded">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-accent/10 text-accent">
+                          {review.type}
+                        </span>
+                      </div>
+                    </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full">
+                          <MoreVertical className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleFlagReview(review.reviewID || "")}>
+                          <Flag className="mr-2 h-4 w-4" />
+                          Flag Review
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleHideReview(review.reviewID || "")}>
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          Hide Review
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handlePublishReview(review.reviewID || "")}>
+                          <Star className="mr-2 h-4 w-4" />
+                          Publish Review
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteReview(review.reviewID || "")}
+                          className="text-red-600"
+                          disabled={deleteReviewMutation.isPending}
+                        >
+                          Delete Review
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };

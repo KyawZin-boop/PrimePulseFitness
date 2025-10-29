@@ -54,9 +54,13 @@ type Client = {
   bookingID: string;
   name: string;
   email: string;
+  gender: string | null;
   joinedDate: Date;
   currentWeight: number | null;
   goalWeight: number | null;
   assignedDietPlan: string;
+  assignedDietPlanID: string | null;
+  assignedWorkoutPlan: string;
+  assignedWorkoutPlanID: string | null;
   notes: string | null;
 }

@@ -58,12 +58,12 @@ const RegisterView = () => {
     api.auth.registerMutation.useMutation({
       onSuccess: (data: string) => {
         userLogin(data);
-        navigate(-1);
-        toast.success("Login successful!");
+        navigate("/auth/login");
+        toast.success("Registration successful!");
       },
 
       onError: () => {
-        toast.error("Login failed! Please try again.");
+        toast.error("Registration failed! Please try again.");
       },
     });
 

@@ -54,11 +54,11 @@ const AdminLayout = () => {
     { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
     { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
     { name: "Memberships", href: "/admin/memberships", icon: CreditCard },
-    { name: "Content", href: "/admin/content", icon: FileText },
-    { name: "Reports", href: "/admin/reports", icon: FileText },
+    // { name: "Content", href: "/admin/content", icon: FileText },
+    // { name: "Reports", href: "/admin/reports", icon: FileText },
     { name: "Reviews", href: "/admin/reviews", icon: MessageSquare },
-    { name: "Notifications", href: "/admin/notifications", icon: Bell },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
+    // { name: "Notifications", href: "/admin/notifications", icon: Bell },
+    // { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 
   const isActive = (path: string) => {

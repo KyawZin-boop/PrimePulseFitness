@@ -125,20 +125,24 @@ const StoreView = () => {
       {/* Products Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredProducts?.map((product) => {
-          const discountedPrice =
-            product.sellingPrice * (1 - product.discount / 100);
+          const discountedPrice = product.sellingPrice * (1 - product.discount / 100);
           return (
             <Card
               key={product.productID}
               className="group cursor-pointer shadow-card transition rounded-t-lg hover:shadow-athletic pt-0"
               onClick={() => setSelectedProduct(product)}
             >
-              <div className="aspect-square overflow-hidden rounded-t-lg bg-secondary">
+              <div className="aspect-square overflow-hidden rounded-t-lg bg-secondary relative">
                 <img
                   src={product.imageUrl}
                   alt={product.name}
                   className="h-full w-full object-cover transition group-hover:scale-105"
                 />
+                {product.discount > 0 && (
+                  <span className="absolute top-2 right-2 bg-accent text-white text-xs font-bold px-2 py-1 rounded-full shadow">
+                    -{product.discount}%
+                  </span>
+                )}
               </div>
               <CardHeader className="pb-3">
                 <div className="mb-1 flex items-center justify-between">
@@ -159,8 +163,11 @@ const StoreView = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-accent">
-                    {discountedPrice.toFixed(2)} Kyat
+                  <span className="text-2xl font-bold text-accent flex items-center gap-2">
+                    {product.discount > 0 && (
+                      <span className="text-base text-muted-foreground line-through">${product.sellingPrice.toFixed(2)}</span>
+                    )}
+                    ${discountedPrice.toFixed(2)}
                   </span>
                   <Button
                     size="sm"
@@ -200,6 +207,11 @@ const StoreView = () => {
                       <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium capitalize">
                         {selectedProduct.categoryName}
                       </span>
+                      {selectedProduct.discount > 0 && (
+                        <span className="bg-accent text-white text-xs font-bold px-2 py-1 rounded-full shadow">
+                          -{selectedProduct.discount}%
+                        </span>
+                      )}
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                         <span className="font-medium">
@@ -230,7 +242,10 @@ const StoreView = () => {
                         <div className="mb-2 text-sm text-muted-foreground">
                           Price
                         </div>
-                        <div className="text-4xl font-bold text-accent">
+                        <div className="text-4xl font-bold text-accent flex items-center gap-3">
+                          {selectedProduct.discount > 0 && (
+                            <span className="text-2xl text-muted-foreground line-through">${selectedProduct.sellingPrice.toFixed(2)}</span>
+                          )}
                           ${discountedPrice.toFixed(2)}
                         </div>
                       </div>

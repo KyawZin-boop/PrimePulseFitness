@@ -114,6 +114,25 @@ const OrderDetail: React.FC = () => {
                     ${order.totalAmount ?? "0.00"}
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Package className="h-4 w-4" />
+                    Status
+                  </div>
+                  <div>
+                    <span className={`px-3 py-1 rounded text-sm font-semibold ${
+                      order.status === 'Confirmed' 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                        : order.status === 'Pending' 
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' 
+                        : order.status === 'Rejected' 
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' 
+                        : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {order.status}
+                    </span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

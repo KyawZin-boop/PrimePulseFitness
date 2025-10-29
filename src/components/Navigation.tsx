@@ -89,8 +89,14 @@ const Navigation = () => {
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuGroup>
                       <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/my-diet")}>My Diet Plan</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/my-workout")}>My Workout Plan</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/progress")}>My Progress</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/orders")}>
                         Order History
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/delivery")}>
+                        Delivery Tracking
                       </DropdownMenuItem>
                       {/* <DropdownMenuItem>Settings</DropdownMenuItem> */}
                     </DropdownMenuGroup>
@@ -169,8 +175,14 @@ const Navigation = () => {
                         <DropdownMenuLabel>My Account</DropdownMenuLabel>
                         <DropdownMenuGroup>
                           <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/my-diet")}>My Diet Plan</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/my-workout")}>My Workout Plan</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/progress")}>My Progress</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate("/orders")}>
                             Order History
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/delivery")}>
+                            Delivery Tracking
                           </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />

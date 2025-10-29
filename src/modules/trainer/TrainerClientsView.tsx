@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Mail, Phone, TrendingUp, User, Calendar, Dumbbell } from "lucide-react";
+import { Mail, TrendingUp, User, Calendar, Dumbbell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "@/api";
 import useAuth from "@/hooks/useAuth";
@@ -74,16 +74,20 @@ const TrainerClientsView = () => {
                 <div className="rounded-lg bg-secondary/50 p-2">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Dumbbell className="h-3 w-3" />
-                    Programs
+                    Workout Plan
                   </div>
-                  <div className="font-semibold">asfd</div>
+                  <div className="font-semibold truncate">
+                    {client.assignedWorkoutPlan || "None"}
+                  </div>
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-2">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
-                    Sessions
+                    Diet Plan
                   </div>
-                  <div className="font-semibold">33</div>
+                  <div className="font-semibold truncate">
+                    {client.assignedDietPlan || "None"}
+                  </div>
                 </div>
               </div>
 
@@ -103,8 +107,15 @@ const TrainerClientsView = () => {
 
               {client.assignedDietPlan && (
                 <div className="text-xs">
-                  <span className="text-muted-foreground">Diet Plan: </span>
+                  <span className="text-muted-foreground">Current Diet: </span>
                   <span className="font-medium">{client.assignedDietPlan}</span>
+                </div>
+              )}
+
+              {client.assignedWorkoutPlan && (
+                <div className="text-xs">
+                  <span className="text-muted-foreground">Current Program: </span>
+                  <span className="font-medium">{client.assignedWorkoutPlan}</span>
                 </div>
               )}
 

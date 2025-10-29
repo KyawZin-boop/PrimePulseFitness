@@ -132,7 +132,11 @@ const LoginView = () => {
                         Email
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Email" {...field} />
+                        <Input
+                          placeholder="Email"
+                          {...field}
+                          className="placeholder:text-white/70"
+                        />
                       </FormControl>
                       <div className="h-[16px]">
                         <FormMessage className="text-xs" />
@@ -153,6 +157,7 @@ const LoginView = () => {
                           placeholder="Password"
                           {...field}
                           type="password"
+                          className="placeholder:text-white/70"
                         />
                       </FormControl>
                       <div className="h-[16px]">

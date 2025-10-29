@@ -17,6 +17,19 @@ export const getPlanByTrainerId = {
     })
 };
 
+export const getPlanByUserId = {
+  useQuery: (userId: string, opt?: Partial<UseQueryOptions<Plan[]>>) => 
+    useQuery<Plan[], Error>({
+      queryKey: ["getPlanByUserId", userId],
+      queryFn: async () => {
+        const response: ApiResponse<Plan[]> = await axios.get(`${BASE_URL}/GetPlanByUserId?userId=${userId}`).then(res => res.data);
+
+        return response.data;
+      },
+      ...opt,
+    })
+}
+
 export const addNewPlan = {
   useMutation: (
     opt?: Partial<UseMutationOptions<null, Error, AddPlan>>

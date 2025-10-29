@@ -60,15 +60,7 @@ const AdminClassesView = () => {
       toast.success("Class created successfully!");
       queryClient.invalidateQueries({ queryKey: ["getAllClasses"] });
       setIsDialogOpen(false);
-      setNewClassName("");
-      setNewDescription("");
-      setNewCapacity("");
-      setNewTrainerId("");
-      setNewDuration("60");
-      setNewTime("To be scheduled");
-      setNewDifficulty("Beginner");
-      setNewRating(0);
-      setNewHighlights("");
+      resetForm();
     },
     onError: () => toast.error("Failed to create class"),
   });
@@ -80,6 +72,7 @@ const AdminClassesView = () => {
       queryClient.invalidateQueries({ queryKey: ["getAllClasses"] });
       setIsEditOpen(false);
       setEditingClass(null);
+      resetForm();
     },
     onError: () => toast.error("Failed to update class"),
   });
@@ -91,6 +84,19 @@ const AdminClassesView = () => {
     },
     onError: () => toast.error("Failed to delete class"),
   });
+
+  const resetForm = () => {
+    setNewClassName("");
+    setNewDescription("");
+    setNewCapacity("");
+    setNewPrice("0");
+    setNewTrainerId("");
+    setNewDuration("60");
+    setNewTime("To be scheduled");
+    setNewDifficulty("Beginner");
+    setNewRating(0);
+    setNewHighlights("");
+  };
 
   const handleCreateClass = () => {
     if (!newClassName || !newDescription || !newCapacity) {
@@ -186,7 +192,15 @@ const AdminClassesView = () => {
           </p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog 
+          open={isDialogOpen} 
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (open) {
+              resetForm(); // Reset form when opening create dialog
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -329,7 +343,13 @@ const AdminClassesView = () => {
             </div>
 
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsDialogOpen(false);
+                  resetForm();
+                }}
+              >
                 Cancel
               </Button>
               <Button onClick={handleCreateClass}>Create Class</Button>
@@ -363,7 +383,16 @@ const AdminClassesView = () => {
           </DialogContent>
         </Dialog>
         {/* Edit Dialog */}
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <Dialog 
+          open={isEditOpen} 
+          onOpenChange={(open) => {
+            setIsEditOpen(open);
+            if (!open) {
+              setEditingClass(null);
+              resetForm(); // Reset form when closing edit dialog
+            }
+          }}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Class</DialogTitle>
@@ -407,7 +436,7 @@ const AdminClassesView = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label>Capacity</Label>
                   <Input
                     type="number"
@@ -415,7 +444,7 @@ const AdminClassesView = () => {
                     onChange={(e) => setNewCapacity(e.target.value)}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label>Duration (mins)</Label>
                   <Input
                     type="number"
@@ -423,7 +452,7 @@ const AdminClassesView = () => {
                     onChange={(e) => setNewDuration(e.target.value)}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label>Price ($)</Label>
                   <Input
                     type="number"
@@ -434,14 +463,14 @@ const AdminClassesView = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label>Time</Label>
                   <Input
                     value={newTime}
                     onChange={(e) => setNewTime(e.target.value)}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label>Difficulty</Label>
                   <Select
                     value={newDifficulty}
@@ -458,7 +487,7 @@ const AdminClassesView = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label>Rating</Label>
                   <Input
                     type="number"
@@ -468,7 +497,7 @@ const AdminClassesView = () => {
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label>Highlights (comma separated)</Label>
                 <Input
                   value={newHighlights}
@@ -483,6 +512,7 @@ const AdminClassesView = () => {
                 onClick={() => {
                   setIsEditOpen(false);
                   setEditingClass(null);
+                  resetForm();
                 }}
               >
                 Cancel

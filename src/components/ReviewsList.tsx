@@ -43,9 +43,14 @@ const ReviewsList = ({ targetID, targetType, onUserReviewFound }: ReviewsListPro
       deleteReviewMutation.mutate(reviewID, {
         onSuccess: () => {
           toast.success("Review deleted successfully");
-          queryClient.invalidateQueries({
-            queryKey: ["getReviewsByTarget", targetID, targetType],
-          });
+          // Invalidate the correct query keys
+          if (targetType === "trainer") {
+            queryClient.invalidateQueries({ queryKey: ["getReviewsByTrainerId", targetID] });
+            queryClient.invalidateQueries({ queryKey: ["getAllTrainers"] });
+          } else if (targetType === "class") {
+            queryClient.invalidateQueries({ queryKey: ["getReviewsByClassId", targetID] });
+            queryClient.invalidateQueries({ queryKey: ["getAllGymClasses"] });
+          }
           queryClient.invalidateQueries({ queryKey: ["getUserReviews"] });
         },
         onError: (error: any) => {

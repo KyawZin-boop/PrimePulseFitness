@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Clock, Users, Calendar, Star } from "lucide-react";
 import { useState } from "react";
 import api from "@/api";
@@ -45,7 +46,19 @@ const Classes = () => {
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [userHasReviewed, setUserHasReviewed] = useState(false);
 
-  const { data: gymClasses } = api.classes.getPopularClasses.useQuery();
+  const { data: gymClasses, isLoading } = api.classes.getPopularClasses.useQuery();
+  const { data: userBookings } = api.bookings.getBookingsByUserId.useQuery(
+    userCredentials?.userId || "",
+    {
+      enabled: !!userCredentials?.userId,
+    } as any
+  );
+
+  const getUserBookingStatus = (classId: string) => {
+    const booking = userBookings?.find((booking) => booking.classID === classId && booking.activeFlag);
+    if (!booking) return null;
+    return booking.status;
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -132,7 +145,40 @@ const Classes = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-          {gymClasses &&
+          {isLoading ? (
+            // Skeleton loading state
+            Array.from({ length: 4 }).map((_, index) => (
+              <Card
+                key={index}
+                className="bg-gradient-card border-0 shadow-card"
+              >
+                <CardHeader className="flex-1">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <Skeleton className="h-6 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/2 mb-2" />
+                    </div>
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </div>
+                  <Skeleton className="h-16 w-full" />
+                </CardHeader>
+
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Skeleton className="h-10 flex-1" />
+                    <Skeleton className="h-10 w-32" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            gymClasses &&
             gymClasses.map((classItem: GymClass) => (
               <Card
                 key={classItem.classID}
@@ -178,7 +224,9 @@ const Classes = () => {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Users className="h-4 w-4 text-accent" />
-                      {classItem.capacity}
+                      <span className="font-medium text-accent">
+                        {classItem.assignedCount}/{classItem.capacity}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4 text-accent" />
@@ -189,10 +237,20 @@ const Classes = () => {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       variant="athletic"
-                      className="flex-1"
+                      className={getUserBookingStatus(classItem.classID) === "Approved" ? "bg-green-500 pointer-events-none flex-1" : "flex-1"}
                       onClick={() => handleBookClass(classItem)}
+                      disabled={
+                        classItem.capacity - classItem.assignedCount <= 0 ||
+                        !!getUserBookingStatus(classItem.classID)
+                      }
                     >
-                      Book Class
+                      {getUserBookingStatus(classItem.classID) === "Pending"
+                        ? "Pending"
+                        : getUserBookingStatus(classItem.classID) === "Approved"
+                        ? "Enrolled"
+                        : classItem.capacity - classItem.assignedCount <= 0
+                        ? "Class Full"
+                        : "Book Class"}
                     </Button>
                     <Button
                       variant="outline_athletic"
@@ -203,11 +261,12 @@ const Classes = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            ))
+          )}
         </div>
 
         <div className="text-center">
-          <Button variant="hero" size="xl">
+          <Button variant="hero" size="xl" onClick={() => {navigate('/classes'); window.scrollTo({ top: 0, behavior: 'smooth' });}}>
             View Full Schedule
           </Button>
         </div>
@@ -315,8 +374,10 @@ const Classes = () => {
                     <div className="font-medium">{selectedClassForDetails.duration}</div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">Capacity</div>
-                    <div className="font-medium">{selectedClassForDetails.capacity} people</div>
+                    <div className="text-sm text-muted-foreground">Spots Left</div>
+                    <div className="font-medium text-accent">
+                      {selectedClassForDetails.capacity - selectedClassForDetails.assignedCount} / {selectedClassForDetails.capacity}
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Difficulty</div>
@@ -349,10 +410,20 @@ const Classes = () => {
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleBookClass(selectedClassForDetails)}
-                    className="flex-1"
+                    className={getUserBookingStatus(selectedClassForDetails.classID) === "Approved" ? "bg-green-500 pointer-events-none flex-1" : "flex-1"}
+                    disabled={
+                      selectedClassForDetails.capacity - selectedClassForDetails.assignedCount <= 0 ||
+                      !!getUserBookingStatus(selectedClassForDetails.classID)
+                    }
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    Book This Class
+                    {getUserBookingStatus(selectedClassForDetails.classID) === "Pending"
+                      ? "Pending"
+                      : getUserBookingStatus(selectedClassForDetails.classID) === "Approved"
+                      ? "Enrolled"
+                      : selectedClassForDetails.capacity - selectedClassForDetails.assignedCount <= 0
+                      ? "Class Full"
+                      : "Book This Class"}
                   </Button>
                   {!userHasReviewed && (
                     <Button

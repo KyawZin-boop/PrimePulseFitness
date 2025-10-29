@@ -11,6 +11,8 @@ import * as orders from "./orders";
 import * as plan from "./plan";
 import * as program from "./program";
 import * as reviews from "./reviews";
+import * as progress from "./progress";
+import * as schedule from "./schedule";
 
 class API {
   auth: typeof auth;
@@ -26,6 +28,8 @@ class API {
   plan: typeof plan;
   program: typeof program;
   reviews: typeof reviews;
+  progress: typeof progress;
+  schedule: typeof schedule;
 
   constructor() {
     this.auth = auth;
@@ -41,6 +45,8 @@ class API {
     this.plan = plan;
     this.program = program;
     this.reviews = reviews;
+    this.progress = progress;
+    this.schedule = schedule;
   }
 }
 

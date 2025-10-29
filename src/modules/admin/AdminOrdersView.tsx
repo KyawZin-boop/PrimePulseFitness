@@ -22,15 +22,11 @@ import { useState } from "react";
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "delivered":
-      return "bg-green-500/10 text-green-600";
-    case "shipped":
+    case "Confirmed":
       return "bg-blue-500/10 text-blue-600";
-    case "processing":
-      return "bg-yellow-500/10 text-yellow-600";
-    case "pending":
+    case "Pending":
       return "bg-orange-500/10 text-orange-600";
-    case "rejected":
+    case "Rejected":
       return "bg-red-500/10 text-red-600";
     default:
       return "bg-gray-500/10 text-gray-600";
@@ -199,7 +195,7 @@ const AdminOrdersView = () => {
                         key={p.orderDetailID}
                         className="flex items-center justify-between"
                       >
-                        <div>{p.productID}</div>
+                        <div>{p.productName}</div>
                         <div>
                           {p.quantity} x {p.price}
                         </div>

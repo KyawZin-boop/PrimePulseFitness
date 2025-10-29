@@ -38,6 +38,20 @@ export const getBookingsByUserId = {
     }),
 };
 
+export const getAllBookings = {
+  useQuery: (opt?: UseQueryOptions<Booking[], Error>) =>
+    useQuery<Booking[], Error>({
+      queryKey: ["getAllBookings"],
+      queryFn: async () => {
+        const response: ApiResponse<Booking[]> = await axios
+          .get(`${BASE_URL}/GetAllBookings`)
+          .then((res) => res.data);
+        return response.data;
+      },
+      ...opt,
+    }),
+};
+
 export const getPendingBookingsByTrainerId = {
   useQuery: (
     trainerId: string,
@@ -49,6 +63,25 @@ export const getPendingBookingsByTrainerId = {
         const response: ApiResponse<TrainerPendingBooking[]> = await axios
           .get(
             `${BASE_URL}/GetPendingBookingsByTrainerId?trainerId=${trainerId}`
+          )
+          .then((res) => res.data);
+        return response.data;
+      },
+      ...opt,
+    }),
+};
+
+export const getBookingsByTrainerId = {
+  useQuery: (
+    trainerId: string,
+    opt?: Partial<UseQueryOptions<TrainerPendingBooking[], Error>>
+  ) =>
+    useQuery<TrainerPendingBooking[], Error>({
+      queryKey: ["getBookingsByTrainerId", trainerId],
+      queryFn: async () => {
+        const response: ApiResponse<TrainerPendingBooking[]> = await axios
+          .get(
+            `${BASE_URL}/GetBookingsByTrainerId?trainerId=${trainerId}`
           )
           .then((res) => res.data);
         return response.data;

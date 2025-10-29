@@ -25,6 +25,27 @@ export const getProgramsByTrainerId = {
     }),
 };
 
+export const getProgramsByUserId = {
+  useQuery: (
+    userId: string,
+    opt?: Partial<UseQueryOptions<Program[]>>
+  ) =>
+    useQuery<Program[], Error>({
+      queryKey: ["getProgramsByUserId", userId],
+      queryFn: async () => {
+        const response: ApiResponse<Program[]> = await axios
+          .get(`${BASE_URL}/GetWorkoutPlanByUserId`, {
+            params: { userId },
+          })
+          .then((res) => res.data);
+
+        return response.data;
+      },
+      enabled: Boolean(userId),
+      ...opt,
+    }),
+};
+
 export const createProgram = {
   useMutation: (
     opt?: Partial<UseMutationOptions<null, Error, AddProgram>>

@@ -2,8 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, Award, Clock, Users } from "lucide-react";
 import api from "@/api";
+import { useNavigate } from "react-router-dom";
 
 const Trainers = () => {
+
+  const navigate = useNavigate();
   
   const { data: trainers } = api.trainers.getPopularTrainers.useQuery();
 
@@ -99,7 +102,7 @@ const Trainers = () => {
         </div>
 
         <div className="text-center">
-          <Button variant="hero" size="xl">
+          <Button variant="hero" size="xl" onClick={() => navigate('/trainers')}>
             Find Your Perfect Trainer
           </Button>
         </div>

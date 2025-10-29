@@ -37,41 +37,43 @@ const ClassesView = () => {
     <div className="bg-background text-foreground">
       <section className="relative overflow-hidden min-h-screen max-h-screen bg-gradient-hero text-primary-foreground">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.25),transparent_55%)]" />
-        <div className="container relative z-10 mx-auto grid gap-8 px-4 py-20 pt-28 lg:grid-cols-[1.2fr_1fr] lg:items-center">
-          <div className="space-y-6">
-            <span className="inline-flex items-center rounded-full border border-white/30 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-white/90">
-              Elite Group Training
-            </span>
-            <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Find your perfect class & build unstoppable momentum
-            </h1>
-            <p className="max-w-2xl text-lg text-white/80">
-              Balance strength, conditioning, and recovery with a carefully curated class schedule. Every session is designed to push you forward while keeping your body balanced and injury free.
-            </p>
-            <div className="flex flex-col items-start gap-4 sm:flex-row">
-              <Button size="lg" variant="hero" onClick={() => navigate("/bookings")}>Book a Session</Button>
-              <Button
-                size="lg"
-                variant="outline_athletic"
-                className="bg-white/10 text-white hover:bg-white hover:text-primary"
-                onClick={() => navigate("/trainers")}
-              >
-                Meet the Coaches
-              </Button>
+        <div className="flex place-content-center min-h-screen">
+          <div className="container relative z-10 mx-auto grid gap-8 px-4 pt-16 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+            <div className="space-y-6">
+              <span className="inline-flex items-center rounded-full border border-white/30 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-white/90">
+                Elite Group Training
+              </span>
+              <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
+                Find your perfect class & build unstoppable momentum
+              </h1>
+              <p className="max-w-2xl text-lg text-white/80">
+                Balance strength, conditioning, and recovery with a carefully curated class schedule. Every session is designed to push you forward while keeping your body balanced and injury free.
+              </p>
+              <div className="flex flex-col items-start gap-4 sm:flex-row">
+                <Button size="lg" variant="hero" onClick={() => navigate("/bookings")}>Book a Session</Button>
+                <Button
+                  size="lg"
+                  variant="outline_athletic"
+                  className="bg-white/10 text-white hover:bg-white hover:text-primary"
+                  onClick={() => navigate("/trainers")}
+                >
+                  Meet the Coaches
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="grid gap-4">
-            {classHighlights.map((highlight) => (
-              <Card key={highlight.title} className="border-white/20 bg-white/10 text-white shadow-accent backdrop-blur-xl">
-                <CardContent className="flex items-start gap-4 p-6">
-                  <highlight.icon className="mt-1 h-7 w-7 text-accent" />
-                  <div>
-                    <h3 className="text-lg font-semibold">{highlight.title}</h3>
-                    <p className="text-sm text-white/70">{highlight.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            <div className="grid gap-4">
+              {classHighlights.map((highlight) => (
+                <Card key={highlight.title} className="border-white/20 bg-white/10 text-white shadow-accent backdrop-blur-xl">
+                  <CardContent className="flex items-start gap-4 p-6">
+                    <highlight.icon className="mt-1 h-7 w-7 text-accent" />
+                    <div>
+                      <h3 className="text-lg font-semibold">{highlight.title}</h3>
+                      <p className="text-sm text-white/70">{highlight.description}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </section>

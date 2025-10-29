@@ -9,20 +9,27 @@ import ContactView from "@/modules/contact/ContactView";
 import ProfileView from "@/modules/user/ProfileView";
 import BookingView from "@/modules/bookings/BookingView";
 import DietPlansView from "@/modules/diet/DietPlansView";
+import UserDietView from "@/modules/diet/UserDietView";
+import UserWorkoutView from "@/modules/user/UserWorkoutView";
 import ProgressView from "@/modules/progress/ProgressView";
 import StoreView from "@/modules/store/StoreView";
 import CheckoutView from "@/modules/store/CheckoutView";
 import CartView from "@/modules/store/CartView";
 import OrderHistory from "@/modules/user/OrderHistory";
 import OrderDetail from "@/modules/user/OrderDetail";
+import DeliveryView from "@/modules/user/DeliveryView";
 import MessagesView from "@/modules/messages/MessagesView";
 import TrainersView from "@/modules/trainers/TrainersView";
+import TrainerDetailView from "@/modules/trainers/TrainerDetailView";
 import LoginView from "@/modules/auth/Login/LoginView";
 import RegisterView from "@/modules/auth/Register/RegisterView";
 import TrainerDashboard from "@/modules/trainer/TrainerDashboard";
 import TrainerClassesView from "@/modules/trainer/TrainerClassesView";
+import TrainerClassRosterView from "@/modules/trainer/TrainerClassRosterView";
+import TrainerAllRostersView from "@/modules/trainer/TrainerAllRostersView";
 import TrainerSessionsView from "@/modules/trainer/TrainerSessionsView";
 import TrainerClientsView from "@/modules/trainer/TrainerClientsView";
+import TrainerClientDetailView from "@/modules/trainer/TrainerClientDetailView";
 import TrainerBookingsView from "@/modules/trainer/TrainerBookingsView";
 import TrainerDietPlansView from "@/modules/trainer/TrainerDietPlansView";
 import TrainerClientProgressView from "@/modules/trainer/TrainerClientProgressView";
@@ -83,6 +90,14 @@ const Router = () => {
           element: <DietPlansView />,
         },
         {
+          path: "my-diet",
+          element: <UserDietView />,
+        },
+        {
+          path: "my-workout",
+          element: <UserWorkoutView />,
+        },
+        {
           path: "progress",
           element: <ProgressView />,
         },
@@ -103,6 +118,10 @@ const Router = () => {
           element: <OrderDetail />,
         },
         {
+          path: "delivery",
+          element: <DeliveryView />,
+        },
+        {
           path: "checkout",
           element: <CheckoutView />,
         },
@@ -113,6 +132,10 @@ const Router = () => {
         {
           path: "trainers",
           element: <TrainersView />,
+        },
+        {
+          path: "trainers/:trainerId",
+          element: <TrainerDetailView />,
         },
         {
           path: "contact",
@@ -147,12 +170,24 @@ const Router = () => {
           element: <TrainerClassesView />,
         },
         {
+          path: "classes/roster",
+          element: <TrainerAllRostersView />,
+        },
+        {
+          path: "classes/:classId/roster",
+          element: <TrainerClassRosterView />,
+        },
+        {
           path: "sessions",
           element: <TrainerSessionsView />,
         },
         {
           path: "clients",
           element: <TrainerClientsView />,
+        },
+        {
+          path: "clients/:clientId",
+          element: <TrainerClientDetailView />,
         },
         {
           path: "bookings",

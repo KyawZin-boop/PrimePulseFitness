@@ -3,12 +3,12 @@ export type Review = {
   userID: string;
   userName: string;
   receiverID: string;
+  receiverName?: string;
   type: string; // "trainer" | "class"
   rating: number;
   content: string;
   createdAt?: Date | string; // Optional, can be Date or string
   updatedAt?: Date | string; // Optional, can be Date or string
-  response?: string; // Trainer's response to the review
 };
 
 export type AddReview = {

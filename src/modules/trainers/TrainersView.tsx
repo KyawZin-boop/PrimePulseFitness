@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   Award,
-  Calendar,
   DollarSign,
   MessageCircle,
   Star,
@@ -58,11 +57,6 @@ const TrainersView = () => {
       trainer?.specialties.includes(selectedSpecialization);
     return matchesSearch && matchesSpecialization;
   });
-
-  const handleBookSession = (trainer: Trainer) => {
-    navigate("/bookings");
-    toast.success(`Redirecting to book a session with ${trainer.name}`);
-  };
 
   const handleSendMessage = (trainer: Trainer) => {
     if (!isAuthenticated) {
@@ -130,7 +124,7 @@ const TrainersView = () => {
           <Card
             key={trainer.trainerID}
             className="group cursor-pointer shadow-card transition hover:shadow-athletic"
-            onClick={() => setSelectedTrainer(trainer)}
+            onClick={() => navigate(`/trainers/${trainer.trainerID}`)}
           >
             <CardHeader>
               <div className="mb-4 flex items-start justify-between">
@@ -175,7 +169,7 @@ const TrainersView = () => {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {trainer.experience} years exp.
+                  {trainer.experience} exp.
                 </span>
                 <span className="font-bold text-accent">
                   ${trainer.fees}/hr
@@ -273,7 +267,7 @@ const TrainersView = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Experience:</span>
                     <span className="font-medium">
-                      {selectedTrainer.experience} years
+                      {selectedTrainer.experience}
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-t pt-2">
@@ -289,13 +283,6 @@ const TrainersView = () => {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleBookSession(selectedTrainer)}
-                    className="flex-1"
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Book Session
-                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => handleSendMessage(selectedTrainer)}
@@ -335,7 +322,14 @@ const TrainersView = () => {
       {selectedTrainer && (
         <ReviewDialog
           open={showReviewDialog}
-          onOpenChange={setShowReviewDialog}
+          onOpenChange={(open) => {
+            setShowReviewDialog(open);
+            // When dialog closes after successful submission, refresh the trainer to update review count
+            if (!open && selectedTrainer) {
+              // The reviews will auto-refresh due to query invalidation in ReviewDialog
+              // But we can also force a refetch here if needed
+            }
+          }}
           targetID={selectedTrainer.trainerID}
           targetType="trainer"
           targetName={selectedTrainer.name}

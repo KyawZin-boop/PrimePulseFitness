@@ -72,9 +72,14 @@ const ReviewDialog = ({
         {
           onSuccess: () => {
             toast.success("Review updated successfully!");
-            queryClient.invalidateQueries({
-              queryKey: ["getReviewsByTarget", targetID, targetType],
-            });
+            // Invalidate reviews queries to refetch
+            if (targetType === "trainer") {
+              queryClient.invalidateQueries({ queryKey: ["getReviewsByTrainerId", targetID] });
+              queryClient.invalidateQueries({ queryKey: ["getAllTrainers"] });
+            } else if (targetType === "class") {
+              queryClient.invalidateQueries({ queryKey: ["getReviewsByClassId", targetID] });
+              queryClient.invalidateQueries({ queryKey: ["getAllGymClasses"] });
+            }
             queryClient.invalidateQueries({ queryKey: ["getUserReviews"] });
             onOpenChange(false);
           },
@@ -95,9 +100,14 @@ const ReviewDialog = ({
         {
           onSuccess: () => {
             toast.success("Review submitted successfully!");
-            queryClient.invalidateQueries({
-              queryKey: ["getReviewsByTarget", targetID, targetType],
-            });
+            // Invalidate reviews queries to refetch
+            if (targetType === "trainer") {
+              queryClient.invalidateQueries({ queryKey: ["getReviewsByTrainerId", targetID] });
+              queryClient.invalidateQueries({ queryKey: ["getAllTrainers"] });
+            } else if (targetType === "class") {
+              queryClient.invalidateQueries({ queryKey: ["getReviewsByClassId", targetID] });
+              queryClient.invalidateQueries({ queryKey: ["getAllGymClasses"] });
+            }
             queryClient.invalidateQueries({ queryKey: ["getUserReviews"] });
             onOpenChange(false);
             resetForm();
