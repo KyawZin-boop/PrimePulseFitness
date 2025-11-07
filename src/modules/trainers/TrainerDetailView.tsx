@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Award,
   DollarSign,
@@ -25,6 +26,8 @@ const TrainerDetailView = () => {
   const { isAuthenticated } = useAuth();
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [userHasReviewed, setUserHasReviewed] = useState(false);
+  const [showLoginConfirm, setShowLoginConfirm] = useState(false);
+  const [loginAction, setLoginAction] = useState<"message" | "review">("message");
 
   const { data: trainer, isLoading } = api.trainers.getTrainerById.useQuery(
     trainerId || ""
@@ -37,8 +40,8 @@ const TrainerDetailView = () => {
 
   const handleSendMessage = () => {
     if (!isAuthenticated) {
-      toast.error("Please login to send messages");
-      navigate("/auth/login");
+      setLoginAction("message");
+      setShowLoginConfirm(true);
       return;
     }
     if (trainer) {
@@ -49,8 +52,8 @@ const TrainerDetailView = () => {
 
   const handleWriteReview = () => {
     if (!isAuthenticated) {
-      toast.error("Please login to write a review");
-      navigate("/auth/login");
+      setLoginAction("review");
+      setShowLoginConfirm(true);
       return;
     }
     setShowReviewDialog(true);
@@ -294,6 +297,39 @@ const TrainerDetailView = () => {
           targetName={trainer.name}
         />
       )}
+
+      {/* Login Confirmation Dialog */}
+      <Dialog open={showLoginConfirm} onOpenChange={setShowLoginConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              {loginAction === "message"
+                ? "You need to be logged in to send messages to trainers. Would you like to login now?"
+                : "You need to be logged in to write reviews. Would you like to login now?"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                navigate(`/auth/login?redirect=/trainers/${trainerId}`);
+                setShowLoginConfirm(false);
+              }}
+              variant="athletic"
+            >
+              Yes, Login
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowLoginConfirm(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

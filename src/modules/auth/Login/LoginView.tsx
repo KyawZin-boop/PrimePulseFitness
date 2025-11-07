@@ -64,10 +64,14 @@ const LoginView = () => {
 
   const { mutate: login, isPending: loginPending } =
     api.auth.loginMutation.useMutation({
-      onSuccess: (data: string) => {
-        userLogin(data);
-        navigate(-1);
-        toast.success("Login successful!");
+      onSuccess: (data: any) => {
+        if(data.status == 0){
+          userLogin(data.data);
+          navigate("/");
+          toast.success("Login successful!");
+        }else{
+          toast.error("Login failed! Please try again.");
+        }
       },
 
       onError: () => {

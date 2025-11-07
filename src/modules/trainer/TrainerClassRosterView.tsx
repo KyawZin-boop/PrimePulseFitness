@@ -19,13 +19,20 @@ import {
   Clock,
   XCircle,
   User,
+  Video,
+  Upload,
+  Trash2,
+  VideoOff,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useState, useRef } from "react";
 
 const TrainerClassRosterView = () => {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
   const { userCredentials } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
 
   // Get trainer data
   const { data: trainerData } = api.trainers.getTrainerData.useQuery(
@@ -34,7 +41,7 @@ const TrainerClassRosterView = () => {
   );
 
   // Get class details
-  const { data: classDetails } = api.classes.getGymClassById.useQuery(
+  const { data: classDetails, refetch: refetchClass } = api.classes.getGymClassById.useQuery(
     classId || ""
   );
 
@@ -43,6 +50,27 @@ const TrainerClassRosterView = () => {
     trainerData?.trainerID || "",
     { enabled: !!trainerData?.trainerID }
   );
+
+  const uploadFileMutation = api.files.uploadFile.useMutation();
+  const addTutorialMutation = api.tutorial.AddTutorial.useMutation({
+    onSuccess: () => {
+      toast.success("Tutorial video uploaded successfully!");
+      refetchClass();
+    },
+    onError: () => {
+      toast.error("Failed to upload tutorial video");
+    },
+  });
+
+  const deleteTutorialMutation = api.tutorial.DeleteTutorial.useMutation({
+    onSuccess: () => {
+      toast.success("Tutorial video deleted successfully!");
+      refetchClass();
+    },
+    onError: () => {
+      toast.error("Failed to delete tutorial video");
+    },
+  });
 
   // Filter bookings for this specific class
   const classBookings = bookings?.filter((b) => b.classID === classId) || [];
@@ -66,6 +94,59 @@ const TrainerClassRosterView = () => {
 
   const handleReject = (bookingId: string) => {
     updateStatusMutation.mutate({ bookingId, status: "Rejected" });
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("video/")) {
+      toast.error("Please select a valid video file");
+      return;
+    }
+
+    // Validate file size (max 100MB)
+    const maxSize = 100 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error("Video file is too large. Maximum size is 100MB");
+      return;
+    }
+
+    setUploadingVideo(true);
+    try {
+      // First upload the video file
+      const videoUrl = await uploadFileMutation.mutateAsync(file);
+
+      // Then add tutorial with the video URL
+      if (classDetails && trainerData) {
+        await addTutorialMutation.mutateAsync({
+          classID: classDetails.classID,
+          trainerID: trainerData.trainerID,
+          videoUrl: videoUrl,
+        });
+      }
+    } catch (error) {
+      toast.error("Failed to upload video");
+    } finally {
+      setUploadingVideo(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleVideoDelete = async () => {
+    if (!classDetails || !trainerData) return;
+
+    try {
+      await deleteTutorialMutation.mutateAsync({
+        classId: classDetails.classID,
+        trainerId: trainerData.trainerID,
+      });
+    } catch (error) {
+      toast.error("Failed to delete video");
+    }
   };
 
   if (!classDetails) {
@@ -138,6 +219,81 @@ const TrainerClassRosterView = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Tutorial Video Section */}
+      <Card className="shadow-card mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Video className="h-5 w-5 text-accent" />
+            Tutorial Video
+          </CardTitle>
+          <CardDescription>
+            Upload a tutorial video to help students learn the class fundamentals
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {classDetails.videoUrl ? (
+            <div className="space-y-4">
+              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+                <video
+                  controls
+                  className="w-full h-full"
+                  src={classDetails.videoUrl}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingVideo || addTutorialMutation.isPending || deleteTutorialMutation.isPending}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Replace Video
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleVideoDelete}
+                  disabled={uploadingVideo || addTutorialMutation.isPending || deleteTutorialMutation.isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="border-2 border-dashed rounded-lg p-12 text-center bg-muted/20">
+                <VideoOff className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground mb-4">
+                  No tutorial video uploaded yet
+                </p>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingVideo}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {uploadingVideo ? "Uploading..." : "Upload Video"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Supported formats: MP4, MOV, AVI • Max size: 100MB
+              </p>
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={handleVideoUpload}
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Enrolled Students */}

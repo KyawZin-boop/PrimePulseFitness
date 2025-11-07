@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, Users, ShoppingCart, Calendar } from "lucide-react";
+import { DollarSign, TrendingUp, Users, ShoppingCart, Calendar, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAllOrders } from "@/api/orders";
 import { getAllBookings } from "@/api/bookings";
+import api from "@/api";
 import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
@@ -11,6 +12,35 @@ const COLORS = ['#14b8a6', '#6366f1', '#f59e0b', '#ef4444'];
 const AdminRevenueView = () => {
   const ordersQuery = getAllOrders.useQuery();
   const bookingsQuery = getAllBookings.useQuery();
+  const membershipPlansQuery = api.membership.getAllMemberships.useQuery();
+  const userMembershipsQuery = api.membership.getAllUserMemberships.useQuery();
+  
+  // Calculate membership revenue data
+  const membershipRevenueData = useMemo(() => {
+    const userMemberships = userMembershipsQuery.data || [];
+    const membershipPlans = membershipPlansQuery.data || [];
+    
+    const approvedMemberships = userMemberships.filter(m => m.status === "approved");
+    const pendingMemberships = userMemberships.filter(m => m.status === "pending");
+    
+    const totalRevenue = approvedMemberships.reduce((sum, membership) => {
+      const plan = membershipPlans.find(p => p.membershipID === membership.membershipID);
+      return sum + (plan?.price || 0);
+    }, 0);
+    
+    const potentialRevenue = pendingMemberships.reduce((sum, membership) => {
+      const plan = membershipPlans.find(p => p.membershipID === membership.membershipID);
+      return sum + (plan?.price || 0);
+    }, 0);
+    
+    return {
+      totalRevenue,
+      potentialRevenue,
+      approvedCount: approvedMemberships.length,
+      pendingCount: pendingMemberships.length,
+      totalCount: userMemberships.length,
+    };
+  }, [userMembershipsQuery.data, membershipPlansQuery.data]);
   
   // Calculate bookings data
   const bookingsData = useMemo(() => {
@@ -35,6 +65,9 @@ const AdminRevenueView = () => {
     // Total revenue from orders
     const totalOrders = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
     
+    // Add membership revenue
+    const totalWithMemberships = totalOrders + membershipRevenueData.totalRevenue;
+    
     // Count by status
     const confirmedOrders = orders.filter(o => o.status === "Confirmed");
     const totalConfirmed = confirmedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
@@ -42,19 +75,20 @@ const AdminRevenueView = () => {
     const totalPending = pendingOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
     
     // Previous month comparison (mock for now - in real app, filter by date)
-    const previousMonthTotal = totalOrders * 0.89; // Simulating previous month
+    const previousMonthTotal = totalWithMemberships * 0.89; // Simulating previous month
     const growth = previousMonthTotal > 0 
-      ? ((totalOrders - previousMonthTotal) / previousMonthTotal * 100).toFixed(1)
+      ? ((totalWithMemberships - previousMonthTotal) / previousMonthTotal * 100).toFixed(1)
       : 0;
     
     return {
       total: totalOrders,
+      totalWithMemberships,
       confirmed: totalConfirmed,
       pending: totalPending,
       ordersCount: orders.length,
       growth: Number(growth),
     };
-  }, [ordersQuery.data]);
+  }, [ordersQuery.data, membershipRevenueData.totalRevenue]);
 
   // Monthly breakdown from orders
   const monthlyBreakdown = useMemo(() => {
@@ -107,15 +141,18 @@ const AdminRevenueView = () => {
         <Button variant="outline">Export Report</Button>
       </div>
 
-      {(ordersQuery.isLoading || bookingsQuery.isLoading) && (
+      {(ordersQuery.isLoading || bookingsQuery.isLoading || 
+        membershipPlansQuery.isLoading || userMembershipsQuery.isLoading) && (
         <div className="text-center py-8">Loading revenue data...</div>
       )}
 
-      {(ordersQuery.isError || bookingsQuery.isError) && (
+      {(ordersQuery.isError || bookingsQuery.isError || 
+        membershipPlansQuery.isError || userMembershipsQuery.isError) && (
         <div className="text-center py-8 text-destructive">Failed to load revenue data</div>
       )}
 
-      {ordersQuery.data && bookingsQuery.data && (
+      {ordersQuery.data && bookingsQuery.data && 
+       membershipPlansQuery.data && userMembershipsQuery.data && (
         <>
           {/* Revenue Stats */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -125,50 +162,108 @@ const AdminRevenueView = () => {
                 <DollarSign className="h-4 w-4 text-accent" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${revenueData.total.toLocaleString()}</div>
+                <div className="text-2xl font-bold">${revenueData.totalWithMemberships.toLocaleString()}</div>
                 <p className="text-xs text-green-600 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
                   +{revenueData.growth}% from last month
                 </p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Confirmed Orders</CardTitle>
-                <ShoppingCart className="h-4 w-4 text-accent" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${revenueData.confirmed.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">
-                  {revenueData.total > 0 ? ((revenueData.confirmed / revenueData.total) * 100).toFixed(1) : 0}% of total
+                <p className="text-xs text-muted-foreground mt-1">
+                  Products: ${revenueData.total.toLocaleString()} • Memberships: ${membershipRevenueData.totalRevenue.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
 
             <Card className="shadow-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+                <CardTitle className="text-sm font-medium">Product Revenue</CardTitle>
+                <ShoppingCart className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${revenueData.total.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">
+                  From {revenueData.ordersCount} orders
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Membership Revenue</CardTitle>
+                <Crown className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${membershipRevenueData.totalRevenue.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">
+                  From {membershipRevenueData.approvedCount} memberships
+                </p>
+                <p className="text-xs text-yellow-600 mt-1">
+                  +${membershipRevenueData.potentialRevenue.toLocaleString()} pending
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Revenue</CardTitle>
                 <Users className="h-4 w-4 text-accent" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${revenueData.pending.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  ${(revenueData.pending + membershipRevenueData.potentialRevenue).toLocaleString()}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  {revenueData.total > 0 ? ((revenueData.pending / revenueData.total) * 100).toFixed(1) : 0}% of total
+                  Orders: ${revenueData.pending.toLocaleString()} • Memberships: ${membershipRevenueData.potentialRevenue.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
+          </div>
 
-            <Card className="shadow-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                <ShoppingCart className="h-4 w-4 text-accent" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{revenueData.ordersCount}</div>
-                <p className="text-xs text-muted-foreground">All time orders</p>
-              </CardContent>
-            </Card>
+          {/* Membership Revenue Breakdown */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Crown className="h-5 w-5 text-accent" />
+              Membership Revenue Breakdown
+            </h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card className="shadow-card">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Approved Memberships</CardTitle>
+                  <Crown className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{membershipRevenueData.approvedCount}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Revenue: ${membershipRevenueData.totalRevenue.toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-card">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Memberships</CardTitle>
+                  <Crown className="h-4 w-4 text-yellow-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-600">{membershipRevenueData.pendingCount}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Potential: ${membershipRevenueData.potentialRevenue.toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-card">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Membership Requests</CardTitle>
+                  <Crown className="h-4 w-4 text-accent" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{membershipRevenueData.totalCount}</div>
+                  <p className="text-xs text-muted-foreground">
+                    All time membership purchases
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Bookings Stats */}

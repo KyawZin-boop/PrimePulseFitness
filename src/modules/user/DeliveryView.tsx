@@ -189,7 +189,7 @@ const DeliveryView: React.FC = () => {
 
           return (
             <Card key={order.orderID} className="shadow-card">
-              <CardHeader className="bg-gradient-card">
+              <CardHeader className="">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Truck className="h-5 w-5 text-accent" />

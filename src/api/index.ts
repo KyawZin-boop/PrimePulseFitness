@@ -13,6 +13,8 @@ import * as program from "./program";
 import * as reviews from "./reviews";
 import * as progress from "./progress";
 import * as schedule from "./schedule";
+import * as tutorial from "./tutorial";
+import * as membership from "./membership";
 
 class API {
   auth: typeof auth;
@@ -30,6 +32,8 @@ class API {
   reviews: typeof reviews;
   progress: typeof progress;
   schedule: typeof schedule;
+  tutorial: typeof tutorial;
+  membership: typeof membership;
 
   constructor() {
     this.auth = auth;
@@ -47,6 +51,8 @@ class API {
     this.reviews = reviews;
     this.progress = progress;
     this.schedule = schedule;
+    this.tutorial = tutorial;
+    this.membership = membership;
   }
 }
 

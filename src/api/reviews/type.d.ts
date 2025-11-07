@@ -2,6 +2,7 @@ export type Review = {
   reviewID?: string; // Optional as API might not return it
   userID: string;
   userName: string;
+  imageUrl: string | null;
   receiverID: string;
   receiverName?: string;
   type: string; // "trainer" | "class"

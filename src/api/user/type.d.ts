@@ -7,6 +7,9 @@ export type User = {
   imageUrl: string | null;
   subscriptionStatus: boolean;
   subscriptionPlan: string | null;
+  membershipName: string | null;
+  membershipDiscountPercentage: number;
+  membershipEndDate: string | null;
   assignedDietPlan: string[];
   assignedWorkoutPlan: string[];
   createdAt: string;

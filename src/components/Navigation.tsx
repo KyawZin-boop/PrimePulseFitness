@@ -89,6 +89,8 @@ const Navigation = () => {
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuGroup>
                       <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/bookings")}>My Bookings</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/membership")}>Membership</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/my-diet")}>My Diet Plan</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/my-workout")}>My Workout Plan</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/progress")}>My Progress</DropdownMenuItem>
@@ -175,6 +177,8 @@ const Navigation = () => {
                         <DropdownMenuLabel>My Account</DropdownMenuLabel>
                         <DropdownMenuGroup>
                           <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/bookings")}>My Bookings</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/membership")}>Membership</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate("/my-diet")}>My Diet Plan</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate("/my-workout")}>My Workout Plan</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate("/progress")}>My Progress</DropdownMenuItem>

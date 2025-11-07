@@ -16,12 +16,16 @@ import {
   User as UserIcon,
   LogIn,
   Calendar,
+  Crown,
+  Lock,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 import api from "@/api";
 import { toast } from "sonner";
+import ChangePasswordDialog from "@/components/dialogs/ChangePasswordDialog";
 
 const UserProfileView = () => {
   const navigate = useNavigate();
@@ -30,6 +34,9 @@ const UserProfileView = () => {
 
   // Get user data from API
   const { data: user, isLoading, refetch } = api.user.getUserById.useQuery(userId);
+
+  // Get user's membership info
+  const { data: userMembership } = api.membership.getUserMembership.useQuery(userId);
 
   // Update user mutation
   const updateUserMutation = api.user.updateUser.useMutation({
@@ -68,6 +75,7 @@ const UserProfileView = () => {
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [editedUser, setEditedUser] = useState({
     name: "",
     email: "",
@@ -212,18 +220,100 @@ const UserProfileView = () => {
             <CardDescription>{user.email}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {user.subscriptionStatus && (
-              <div className="rounded-lg bg-accent/10 p-4">
+            {/* Membership Status */}
+            {userMembership?.status === "approved" && userMembership?.activeFlag && (
+              <div className="rounded-lg bg-gradient-to-br from-accent/20 to-accent/10 p-4 border border-accent/30">
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-accent">
-                  <Calendar className="h-4 w-4" />
-                  Subscription
+                  <Crown className="h-4 w-4" />
+                  Membership
                 </div>
-                <p className="text-sm font-medium">
-                  {user.subscriptionPlan || "Active Membership"}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {userMembership.membershipName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {userMembership.discountPercentage}% discount on purchases
+                    </p>
+                  </div>
+                  <Badge className="bg-green-600">Active</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Valid until {new Date(userMembership.endDate).toLocaleDateString()}
                 </p>
-                <p className="text-xs text-muted-foreground">Status: Active</p>
               </div>
             )}
+            {userMembership?.status === "pending" && (
+              <div className="rounded-lg bg-yellow-500/10 p-4 border border-yellow-500/30">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-yellow-600">
+                  <Crown className="h-4 w-4" />
+                  Membership Request Pending
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {userMembership.membershipName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Your payment receipt is being reviewed
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600">
+                    Pending
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  We'll notify you once your membership is approved
+                </p>
+              </div>
+            )}
+            {userMembership?.status === "rejected" && (
+              <div className="rounded-lg bg-red-500/10 p-4 border border-red-500/30">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-red-600">
+                  <Crown className="h-4 w-4" />
+                  Membership Request Rejected
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {userMembership.membershipName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Please contact support or try again
+                    </p>
+                  </div>
+                  <Badge variant="destructive">Rejected</Badge>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate("/membership")}
+                  className="w-full mt-3"
+                >
+                  Try Again
+                </Button>
+              </div>
+            )}
+            {!userMembership && (
+              <div className="rounded-lg bg-muted/50 p-4 border">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                  <Crown className="h-4 w-4 text-muted-foreground" />
+                  Membership
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Get exclusive discounts on all purchases
+                </p>
+                <Button
+                  size="sm"
+                  variant="athletic"
+                  onClick={() => navigate("/membership")}
+                  className="w-full"
+                >
+                  View Plans
+                </Button>
+              </div>
+            )}
+
             <div className="rounded-lg bg-secondary/50 p-4">
               <div className="text-xs text-muted-foreground mb-2">Member Since</div>
               <p className="text-sm font-medium">
@@ -316,6 +406,36 @@ const UserProfileView = () => {
             </CardContent>
           </Card>
 
+          {/* Security Settings */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-accent" />
+                Security Settings
+              </CardTitle>
+              <CardDescription>
+                Manage your account security and password
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/20">
+                <div>
+                  <p className="font-medium mb-1">Password</p>
+                  <p className="text-sm text-muted-foreground">
+                    Change your password to keep your account secure
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowChangePasswordDialog(true)}
+                >
+                  <Lock className="mr-2 h-4 w-4" />
+                  Change Password
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Assigned Plans */}
           <Card className="shadow-card">
             <CardHeader>
@@ -374,6 +494,13 @@ const UserProfileView = () => {
           </Card>
         </div>
       </div>
+
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={showChangePasswordDialog}
+        onOpenChange={setShowChangePasswordDialog}
+        userID={userId}
+      />
     </div>
   );
 };

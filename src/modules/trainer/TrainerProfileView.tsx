@@ -5,10 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Mail, Save, UploadCloud, User } from "lucide-react";
+import { Loader2, Lock, Mail, Save, UploadCloud, User } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/api";
 import useAuth from "@/hooks/useAuth";
+import ChangePasswordDialog from "@/components/dialogs/ChangePasswordDialog";
 
 type FormState = {
   name: string;
@@ -43,6 +44,7 @@ const ALLOWED_PROFILE_PHOTO_TYPES = ["image/jpeg", "image/png", "image/jpg"] as 
 
 const TrainerProfileView = () => {
   const [formState, setFormState] = useState<FormState>(emptyFormState);
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { userCredentials } = useAuth();
   const userId = userCredentials?.userId ?? "";
@@ -480,6 +482,46 @@ const TrainerProfileView = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Security Settings */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+                <Lock className="h-5 w-5 text-accent" />
+                Security Settings
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Manage your account security and password
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/20">
+              <div>
+                <p className="font-medium mb-1">Password</p>
+                <p className="text-sm text-muted-foreground">
+                  Change your password to keep your account secure
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowChangePasswordDialog(true)}
+              >
+                <Lock className="mr-2 h-4 w-4" />
+                Change Password
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={showChangePasswordDialog}
+        onOpenChange={setShowChangePasswordDialog}
+        userID={userId}
+      />
     </div>
   );
 };

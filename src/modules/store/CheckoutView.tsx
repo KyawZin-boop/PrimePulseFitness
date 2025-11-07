@@ -5,6 +5,7 @@ import { clearCart } from "@/store/slices/cartSlice";
 import { createOrder } from "@/api/orders";
 import { uploadFile } from "@/api/files";
 import useAuth from "@/hooks/useAuth";
+import api from "@/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -15,8 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Crown } from "lucide-react";
 
 type CartProduct = {
   productID: string;
@@ -29,6 +31,20 @@ const CheckoutView: React.FC = () => {
   const dispatch = useAppDispatch();
   const cart = useAppSelector((s) => s.cart);
   const { userCredentials } = useAuth();
+
+  // Get user's active membership for discount
+  const { data: userMembership } = api.membership.getUserMembership.useQuery(
+    userCredentials?.userId || ""
+  );
+
+  // Calculate discount based on membership (only for approved memberships)
+  const membershipDiscount = 
+    userMembership?.activeFlag && userMembership?.status === "approved"
+      ? userMembership.discountPercentage
+      : 0;
+  const subtotal = cart.totalPrice;
+  const discountAmount = (subtotal * membershipDiscount) / 100;
+  const finalTotal = subtotal - discountAmount;
 
   if (cart.items.length === 0) {
     return (
@@ -91,7 +107,7 @@ const CheckoutView: React.FC = () => {
 
       const payload: CreateOrderPayload = {
         userID: userCredentials?.userId ?? "",
-        totalAmount: cart.totalPrice,
+        totalAmount: finalTotal, // Use discounted total
         quantity: cart.totalItems,
         imageUrl: uploadedUrl,
         products,
@@ -205,6 +221,30 @@ const CheckoutView: React.FC = () => {
           />
         </div> */}
 
+        {/* Membership Discount Info */}
+        {userMembership?.activeFlag && (
+          <Card className="border-accent/50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-accent/10">
+                  <Crown className="h-5 w-5 text-accent" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold">
+                      {userMembership.membershipName} Membership
+                    </p>
+                    <Badge className="bg-accent">Active</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {membershipDiscount}% discount applied to your order
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="border rounded p-3">
           <h3 className="font-semibold">Order summary</h3>
           <div className="mt-2">
@@ -213,13 +253,28 @@ const CheckoutView: React.FC = () => {
                 <div>
                   {it.name} x {it.quantity}
                 </div>
-                <div>{(it.discountedPrice * it.quantity).toFixed(2)}</div>
+                <div>${(it.discountedPrice * it.quantity).toFixed(2)}</div>
               </div>
             ))}
-            <div className="flex justify-between font-semibold mt-2">
-              <div>Total</div>
-              <div>{cart.totalPrice.toFixed(2)}</div>
+            <div className="flex justify-between mt-2 pt-2 border-t">
+              <div className="text-muted-foreground">Subtotal</div>
+              <div>${subtotal.toFixed(2)}</div>
             </div>
+            {membershipDiscount > 0 && (
+              <div className="flex justify-between text-accent">
+                <div>Membership Discount ({membershipDiscount}%)</div>
+                <div>-${discountAmount.toFixed(2)}</div>
+              </div>
+            )}
+            <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t">
+              <div>Total</div>
+              <div className="text-accent">${finalTotal.toFixed(2)}</div>
+            </div>
+            {membershipDiscount > 0 && (
+              <p className="text-xs text-muted-foreground mt-2 text-right">
+                You saved ${discountAmount.toFixed(2)} with your membership!
+              </p>
+            )}
           </div>
         </div>
 

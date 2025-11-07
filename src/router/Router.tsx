@@ -18,6 +18,7 @@ import CartView from "@/modules/store/CartView";
 import OrderHistory from "@/modules/user/OrderHistory";
 import OrderDetail from "@/modules/user/OrderDetail";
 import DeliveryView from "@/modules/user/DeliveryView";
+import MembershipView from "@/modules/user/MembershipView";
 import MessagesView from "@/modules/messages/MessagesView";
 import TrainersView from "@/modules/trainers/TrainersView";
 import TrainerDetailView from "@/modules/trainers/TrainerDetailView";
@@ -51,7 +52,8 @@ import AdminBookingsView from "@/modules/admin/AdminBookingsView";
 import AdminProductsView from "@/modules/admin/AdminProductsView";
 import AdminOrdersView from "@/modules/admin/AdminOrdersView";
 import AdminRevenueView from "@/modules/admin/AdminRevenueView";
-import AdminMembershipsView from "@/modules/admin/AdminMembershipsView";
+import AdminMembershipsView from "@/modules/admin/AdminMembershipsManagementView";
+import AdminMembershipRequestsView from "@/modules/admin/AdminMembershipRequestsView";
 import AdminContentView from "@/modules/admin/AdminContentView";
 import AdminReportsView from "@/modules/admin/AdminReportsView";
 import AdminSettingsView from "@/modules/admin/AdminSettingsView";
@@ -120,6 +122,10 @@ const Router = () => {
         {
           path: "delivery",
           element: <DeliveryView />,
+        },
+        {
+          path: "membership",
+          element: <MembershipView />,
         },
         {
           path: "checkout",
@@ -286,6 +292,10 @@ const Router = () => {
         {
           path: "memberships",
           element: <AdminMembershipsView />,
+        },
+        {
+          path: "membership-requests",
+          element: <AdminMembershipRequestsView />,
         },
         {
           path: "content",

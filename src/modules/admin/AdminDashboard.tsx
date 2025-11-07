@@ -15,6 +15,8 @@ import {
   ShoppingCart,
   Loader2,
   Package,
+  Crown,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAllUsers } from "@/api/user";
@@ -22,6 +24,7 @@ import { getAllTrainers } from "@/api/trainer";
 import { getAllBookings } from "@/api/bookings";
 import { getAllProducts } from "@/api/products";
 import { getAllClasses } from "@/api/classes";
+import api from "@/api";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart,
@@ -48,12 +51,16 @@ const AdminDashboard = () => {
   const bookingsQuery = getAllBookings.useQuery();
   const productsQuery = getAllProducts.useQuery();
   const classesQuery = getAllClasses.useQuery();
+  const membershipPlansQuery = api.membership.getAllMemberships.useQuery();
+  const userMembershipsQuery = api.membership.getAllUserMemberships.useQuery();
 
   const users = usersQuery.data || [];
   const trainers = trainersQuery.data || [];
   const bookings = bookingsQuery.data || [];
   const products = productsQuery.data || [];
   const classes = classesQuery.data || [];
+  const membershipPlans = membershipPlansQuery.data || [];
+  const userMemberships = userMembershipsQuery.data || [];
 
   // Calculate statistics
   const activeBookings = bookings.filter(b => b.activeFlag && b.status.toLowerCase() === "approved").length;
@@ -61,11 +68,24 @@ const AdminDashboard = () => {
   const activeUsers = users.filter(u => u.activeFlag).length;
   const subscribedUsers = users.filter(u => u.subscriptionStatus).length;
   
+  // Calculate membership statistics
+  const activeMemberships = userMemberships.filter(m => m.status === "approved" && m.activeFlag).length;
+  const pendingMemberships = userMemberships.filter(m => m.status === "pending").length;
+  const totalMembershipRevenue = userMemberships
+    .filter(m => m.status === "approved")
+    .reduce((sum, m) => {
+      const plan = membershipPlans.find(p => p.membershipID === m.membershipID);
+      return sum + (plan?.price || 0);
+    }, 0);
+  
   // Calculate recent growth (users created in last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const newUsersThisMonth = users.filter(u => new Date(u.createdAt) > thirtyDaysAgo).length;
   const newTrainersThisMonth = trainers.filter(t => new Date(t.createdAt) > thirtyDaysAgo).length;
+  const newMembershipsThisMonth = userMemberships.filter(m => 
+    m.status === "approved" && new Date(m.createdAt) > thirtyDaysAgo
+  ).length;
 
   const stats = {
     totalUsers: users.length,
@@ -78,6 +98,11 @@ const AdminDashboard = () => {
     newTrainersThisMonth,
     activeUsers,
     subscribedUsers,
+    activeMemberships,
+    pendingMemberships,
+    totalMembershipRevenue,
+    newMembershipsThisMonth,
+    totalMembershipPlans: membershipPlans.filter(p => p.activeFlag).length,
   };
 
   // Prepare chart data - User growth over last 7 days
@@ -119,7 +144,9 @@ const AdminDashboard = () => {
   const COLORS = ['#22c55e', '#eab308', '#ef4444', '#3b82f6', '#8b5cf6'];
 
   const isLoading = usersQuery.isLoading || trainersQuery.isLoading || 
-                    bookingsQuery.isLoading || productsQuery.isLoading || classesQuery.isLoading;
+                    bookingsQuery.isLoading || productsQuery.isLoading || 
+                    classesQuery.isLoading || membershipPlansQuery.isLoading || 
+                    userMembershipsQuery.isLoading;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -169,6 +196,170 @@ const AdminDashboard = () => {
                   <TrendingUp className="h-3 w-3" />
                   +{stats.newTrainersThisMonth} this month
                 </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Products
+                </CardTitle>
+                <Package className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalProducts}</div>
+                <p className="text-xs text-muted-foreground">
+                  Available in store
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Active Bookings
+                </CardTitle>
+                <Calendar className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.activeBookings}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.pendingBookings} pending approval
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Active Memberships
+                </CardTitle>
+                <Crown className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.activeMemberships}</div>
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +{stats.newMembershipsThisMonth} this month
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.pendingMemberships} pending approval
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Membership Revenue
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${stats.totalMembershipRevenue.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">
+                  From {stats.activeMemberships} active memberships
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Membership Plans Grid */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Crown className="h-5 w-5 text-accent" />
+              Membership Plans Overview
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {membershipPlans.filter(p => p.activeFlag).map((plan) => (
+                <Card key={plan.membershipID} className="shadow-card border-accent/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">{plan.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="text-2xl font-bold text-accent">${plan.price}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {plan.discountPercentage}% discount • {plan.duration} days
+                      </div>
+                      <div className="pt-2 border-t">
+                        <div className="text-xs font-medium text-muted-foreground">Active Users:</div>
+                        <div className="text-lg font-bold">
+                          {userMemberships.filter(m => 
+                            m.membershipID === plan.membershipID && 
+                            m.status === "approved" && 
+                            m.activeFlag
+                          ).length}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {membershipPlans.filter(p => p.activeFlag).length === 0 && (
+                <Card className="shadow-card col-span-full">
+                  <CardContent className="p-8 text-center">
+                    <Crown className="h-12 w-12 mx-auto text-muted-foreground opacity-50 mb-2" />
+                    <p className="text-muted-foreground">No active membership plans</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+
+          {/* Stats Grid - Second Row */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Plans</CardTitle>
+                <Crown className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalMembershipPlans}</div>
+                <p className="text-xs text-muted-foreground">Active membership plans</p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                <Clock className="h-4 w-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">{stats.pendingMemberships}</div>
+                <p className="text-xs text-muted-foreground">Awaiting approval</p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Membership Rate</CardTitle>
+                <Users className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stats.totalUsers > 0 
+                    ? ((stats.activeMemberships / stats.totalUsers) * 100).toFixed(1)
+                    : 0}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.activeMemberships} of {stats.totalUsers} users
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts Section - Move existing stats grid here */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+            <Card className="shadow-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Classes</CardTitle>
+                <Calendar className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalClasses}</div>
+                <p className="text-xs text-muted-foreground">Available classes</p>
               </CardContent>
             </Card>
 
@@ -322,6 +513,22 @@ const AdminDashboard = () => {
                 >
                   <Calendar className="mr-2 h-4 w-4" />
                   View Bookings ({stats.activeBookings})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/memberships')}
+                >
+                  <Crown className="mr-2 h-4 w-4" />
+                  Manage Memberships ({stats.totalMembershipPlans})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/membership-requests')}
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  Pending Requests ({stats.pendingMemberships})
                 </Button>
               </CardContent>
             </Card>

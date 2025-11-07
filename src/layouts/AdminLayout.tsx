@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   LogOut,
+  ClipboardCheck,
 } from "lucide-react";
 import { useState } from "react";
 import useAuth from "@/hooks/useAuth";
@@ -54,6 +55,7 @@ const AdminLayout = () => {
     { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
     { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
     { name: "Memberships", href: "/admin/memberships", icon: CreditCard },
+    { name: "Membership Requests", href: "/admin/membership-requests", icon: ClipboardCheck },
     // { name: "Content", href: "/admin/content", icon: FileText },
     // { name: "Reports", href: "/admin/reports", icon: FileText },
     { name: "Reviews", href: "/admin/reviews", icon: MessageSquare },

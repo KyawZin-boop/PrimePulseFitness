@@ -103,8 +103,16 @@ const ReviewsList = ({ targetID, targetType, onUserReviewFound }: ReviewsListPro
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
-                        <User className="h-5 w-5 text-muted-foreground" />
+                      <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                        {review.imageUrl ? (
+                          <img 
+                            src={review.imageUrl} 
+                            alt={review.userName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <User className="h-5 w-5 text-muted-foreground" />
+                        )}
                       </div>
                       <div>
                         <p className="font-medium">{review.userName}</p>

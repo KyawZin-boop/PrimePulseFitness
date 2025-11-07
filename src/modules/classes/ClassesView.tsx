@@ -1,7 +1,7 @@
-import Classes from "@/components/Classes";
+import api from "@/api";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CheckCircle2, Dumbbell, Flame, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -29,6 +29,85 @@ const classPerks = [
   "Personalized program adjustments from your assigned coach",
   "Exclusive recovery workshops and mobility clinics",
 ];
+
+// Fetch and display all classes
+const AllClassesGrid = () => {
+  const navigate = useNavigate();
+  const { data: classes, isLoading, isError } = api.classes.getAllClasses.useQuery();
+
+  if (isLoading) return <div className="py-12 text-center">Loading classes...</div>;
+  if (isError || !classes) return <div className="py-12 text-center text-destructive">Failed to load classes.</div>;
+
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {classes.map((gymClass: any) => (
+        <Card 
+          key={gymClass.classId} 
+          className="group shadow-card pt-0 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border-0 bg-gradient-card"
+          onClick={() => navigate(`/classes/${gymClass.classID}`)}
+        >
+          {/* Class Header with Gradient */}
+          <div className="relative h-24 bg-gradient-to-br from-accent/20 via-accent/10 to-transparent p-6 flex items-end">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_70%)]" />
+            <CardTitle className="relative text-2xl font-bold group-hover:text-accent transition-colors">
+              {gymClass.className}
+            </CardTitle>
+          </div>
+
+          <CardContent className="p-6 space-y-4">
+            {/* Description */}
+            <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
+              {gymClass.description}
+            </p>
+
+            {/* Trainer Info */}
+            <div className="flex items-center gap-2 text-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10">
+                <Users className="h-4 w-4 text-accent" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Instructor</p>
+                <p className="font-semibold text-foreground">{gymClass.trainerName}</p>
+              </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3">
+                <Dumbbell className="h-4 w-4 text-accent" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="text-sm font-semibold">{gymClass.duration}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3">
+                <Users className="h-4 w-4 text-accent" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Capacity</p>
+                  <p className="text-sm font-semibold">{gymClass.capacity}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <Button 
+              size="sm" 
+              className="w-full mt-4 group-hover:bg-accent group-hover:text-white transition-all" 
+              variant="outline"
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                navigate(`/classes/${gymClass.classID}`); 
+              }}
+            >
+              View Details & Tutorial
+              <CheckCircle2 className="ml-2 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
 
 const ClassesView = () => {
   const navigate = useNavigate();
@@ -78,7 +157,16 @@ const ClassesView = () => {
         </div>
       </section>
 
-      <Classes />
+      {/* All Classes Grid */}
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="mb-8 text-center">
+            <h2 className="text-3xl font-bold mb-2">Explore Our Classes</h2>
+            <p className="text-muted-foreground">Find the perfect class to match your fitness goals</p>
+          </div>
+          <AllClassesGrid />
+        </div>
+      </section>
 
       <section className="py-20">
         <div className="container mx-auto grid gap-10 px-4 lg:grid-cols-[1.1fr_1fr] lg:items-center">

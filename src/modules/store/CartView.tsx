@@ -1,17 +1,32 @@
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, ShoppingBag, ShoppingCart, Trash2 } from "lucide-react";
+import { Minus, Plus, ShoppingBag, ShoppingCart, Trash2, Crown } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/store";
 import { removeFromCart, updateQuantity } from "@/store/slices/cartSlice";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import useAuth from "@/hooks/useAuth";
+import api from "@/api";
+import { Badge } from "@/components/ui/badge";
 
 const CartView = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { userCredentials } = useAuth();
   const { items, totalItems, totalPrice } = useSelector(
     (state: RootState) => state.cart
   );
+
+  // Get user's membership for discount preview
+  const { data: userMembership } = api.membership.getUserMembership.useQuery(
+    userCredentials?.userId || ""
+  );
+
+  const membershipDiscount = userMembership?.activeFlag
+    ? userMembership.discountPercentage
+    : 0;
+  const discountAmount = (totalPrice * membershipDiscount) / 100;
+  const estimatedTotal = totalPrice - discountAmount;
 
   const handleUpdateQuantity = (productId: string, delta: number) => {
     const item = items.find((cartItem) => cartItem.productID === productId);
@@ -161,17 +176,60 @@ const CartView = () => {
                 Review your cart before completing your purchase.
               </p>
             </div>
+
+            {/* Membership Discount Info */}
+            {userMembership?.activeFlag && (
+              <div className="rounded-lg bg-accent/10 p-3 border border-accent/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <Crown className="h-4 w-4 text-accent" />
+                  <span className="font-semibold text-sm text-accent">
+                    {userMembership.membershipName}
+                  </span>
+                  <Badge className="bg-accent text-xs">Active</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {membershipDiscount}% discount will be applied at checkout
+                </p>
+              </div>
+            )}
+
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span>Items</span>
                 <span className="font-medium">{totalItems}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Total</span>
+                <span>Subtotal</span>
+                <span className="font-medium">${totalPrice.toFixed(2)}</span>
+              </div>
+              {membershipDiscount > 0 && (
+                <div className="flex items-center justify-between text-accent">
+                  <span>Membership Discount ({membershipDiscount}%)</span>
+                  <span>-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between border-t pt-3">
+                <span className="font-semibold">Estimated Total</span>
                 <span className="text-xl font-bold text-accent">
-                  ${totalPrice.toFixed(2)}
+                  ${estimatedTotal.toFixed(2)}
                 </span>
               </div>
+              {!userMembership?.activeFlag && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Want to save on every purchase?
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/membership")}
+                    className="w-full"
+                  >
+                    <Crown className="h-3 w-3 mr-2" />
+                    View Memberships
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Button onClick={handleCheckout}>Checkout</Button>

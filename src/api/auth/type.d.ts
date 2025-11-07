@@ -30,3 +30,9 @@ type UserLogin = {
   email: string;
   password: string;
 };
+
+type ChangePasswordPayload = {
+  userID: string;
+  oldPassword: string;
+  newPassword: string;
+};

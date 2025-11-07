@@ -5,6 +5,7 @@ type GymClass = {
   trainerName: string;
   duration: string;
   capacity: number;
+  videoUrl?: string;
   assignedCount: number;
   price: number;
   time: string;
@@ -40,4 +41,5 @@ type UpdateClassDTO = {
   capacity: number;
   assignedCount: number;
   rating: number;
+  videoUrl?: string;
 };

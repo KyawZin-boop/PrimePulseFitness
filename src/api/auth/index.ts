@@ -37,7 +37,21 @@ export const loginMutation = {
       mutationKey: ["loginMutation"],
       mutationFn: async (payload: UserLogin) => {
         const response = await axios.post(`${BASE_URL}/Login`, payload);
-        return response.data.data;
+        return response.data;
+      },
+      ...opt,
+    }),
+};
+
+export const changePasswordMutation = {
+  useMutation: (
+    opt?: UseMutationOptions<void, Error, ChangePasswordPayload, void>
+  ) =>
+    useMutation({
+      mutationKey: ["changePasswordMutation"],
+      mutationFn: async (payload: ChangePasswordPayload) => {
+        const response = await axios.post(`${BASE_URL}/ChangePassword`, payload);
+        return response.data;
       },
       ...opt,
     }),
