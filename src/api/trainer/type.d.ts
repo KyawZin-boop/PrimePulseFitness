@@ -54,6 +54,7 @@ type Client = {
   bookingID: string;
   name: string;
   email: string;
+  imageUrl: string | null;
   gender: string | null;
   joinedDate: Date;
   currentWeight: number | null;

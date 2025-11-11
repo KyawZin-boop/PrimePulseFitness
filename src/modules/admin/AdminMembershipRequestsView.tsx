@@ -154,7 +154,7 @@ const AdminMembershipRequestsView = () => {
                     <div className="flex-1">
                       <CardTitle className="text-lg">{request.membershipName}</CardTitle>
                       <CardDescription className="mt-1">
-                        Requested by: {request.userID}
+                        Requested by: {request.userName}
                       </CardDescription>
                     </div>
                     {getStatusBadge(request.status)}

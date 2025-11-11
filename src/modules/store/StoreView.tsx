@@ -162,13 +162,17 @@ const StoreView = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-accent flex items-center gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <div className="text-2xl font-bold text-accent">
+                      ${discountedPrice.toFixed(2)}
+                    </div>
                     {product.discount > 0 && (
-                      <span className="text-base text-muted-foreground line-through">${product.sellingPrice.toFixed(2)}</span>
+                      <div className="text-sm text-muted-foreground line-through">
+                        ${product.sellingPrice.toFixed(2)}
+                      </div>
                     )}
-                    ${discountedPrice.toFixed(2)}
-                  </span>
+                  </div>
                   <Button
                     size="sm"
                     onClick={(e) => {
@@ -242,11 +246,20 @@ const StoreView = () => {
                         <div className="mb-2 text-sm text-muted-foreground">
                           Price
                         </div>
-                        <div className="text-4xl font-bold text-accent flex items-center gap-3">
+                        <div className="space-y-1">
+                          <div className="text-4xl font-bold text-accent">
+                            ${discountedPrice.toFixed(2)}
+                          </div>
                           {selectedProduct.discount > 0 && (
-                            <span className="text-2xl text-muted-foreground line-through">${selectedProduct.sellingPrice.toFixed(2)}</span>
+                            <>
+                              <div className="text-lg text-muted-foreground line-through">
+                                ${selectedProduct.sellingPrice.toFixed(2)}
+                              </div>
+                              <div className="text-sm text-green-600 font-medium">
+                                Save ${(selectedProduct.sellingPrice - discountedPrice).toFixed(2)} ({selectedProduct.discount}% off)
+                              </div>
+                            </>
                           )}
-                          ${discountedPrice.toFixed(2)}
                         </div>
                       </div>
 

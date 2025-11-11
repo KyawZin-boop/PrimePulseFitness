@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { TrendingUp, TrendingDown, Minus, User, Plus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, User, Plus, Upload, X, Image as ImageIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -58,6 +58,10 @@ const TrainerClientProgressView = () => {
   const { userCredentials } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [selectedProgressImage, setSelectedProgressImage] = useState<string | null>(null);
 
   // Get trainer data first
   const { data: trainerData } = api.trainers.getTrainerData.useQuery(
@@ -94,11 +98,15 @@ const TrainerClientProgressView = () => {
     },
   });
 
+  const { mutate: uploadFileMutation } = api.files.uploadFile.useMutation();
+
   const { mutate: addProgressMutation, isPending } = api.progress.addProgress.useMutation({
     onSuccess: () => {
       toast.success("Progress added successfully!");
       setShowAddDialog(false);
       form.reset();
+      setSelectedFile(null);
+      setImagePreview(null);
       refetch();
     },
     onError: () => {
@@ -106,17 +114,67 @@ const TrainerClientProgressView = () => {
     },
   });
 
-  const onSubmit = (values: any) => {
-    const payload = {
-      ...values,
-      imageUrl: values.imageUrl || null,
-      chest: values.chest || null,
-      waist: values.waist || null,
-      arms: values.arms || null,
-      thighs: values.thighs || null,
-      hips: values.hips || null,
-    };
-    addProgressMutation(payload);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size must be less than 5MB");
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please upload an image file");
+        return;
+      }
+
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedFile(null);
+    setImagePreview(null);
+    form.setValue("imageUrl", null);
+  };
+
+  const onSubmit = async (values: any) => {
+    setIsUploadingImage(true);
+    let imageUrl = values.imageUrl;
+
+    try {
+      // Upload image if selected
+      if (selectedFile) {
+        imageUrl = await new Promise<string>((resolve, reject) => {
+          uploadFileMutation(selectedFile, {
+            onSuccess: (url) => resolve(url),
+            onError: () => reject(new Error("Image upload failed")),
+          });
+        });
+      }
+
+      const payload = {
+        ...values,
+        imageUrl: imageUrl || null,
+        chest: values.chest || null,
+        waist: values.waist || null,
+        arms: values.arms || null,
+        thighs: values.thighs || null,
+        hips: values.hips || null,
+      };
+      
+      addProgressMutation(payload);
+    } catch (error) {
+      toast.error("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const getWeightTrend = (userId: string) => {
@@ -137,6 +195,10 @@ const TrainerClientProgressView = () => {
   const getClientName = (userId: string) => {
     return clients?.find((c) => c.userID === userId)?.name || "Unknown Client";
   };
+
+  const getClientPfp = (userId: string) => {
+    return clients?.find(c => c.userID === userId)?.imageUrl || undefined;
+  }
 
   const getSelectedClient = () => {
     return clients?.find((c) => c.userID === selectedClientId);
@@ -164,7 +226,9 @@ const TrainerClientProgressView = () => {
 
       <div className="space-y-6">
         {progressEntries && progressEntries.length > 0 ? (
-          progressEntries.map((entry) => {
+          progressEntries
+            .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+            .map((entry) => {
             const trend = getWeightTrend(entry.userID);
 
             return (
@@ -173,9 +237,9 @@ const TrainerClientProgressView = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1">
                       <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                        {entry.imageUrl ? (
+                        {getClientPfp(entry.userID) ? (
                           <img
-                            src={entry.imageUrl}
+                            src={getClientPfp(entry.userID)}
                             alt={getClientName(entry.userID)}
                             className="h-full w-full object-cover"
                           />
@@ -222,6 +286,19 @@ const TrainerClientProgressView = () => {
                 </CardHeader>
 
                 <CardContent>
+                  {entry.imageUrl && (
+                    <div className="mb-4">
+                      <div className="relative aspect-video w-full max-w-md mx-auto overflow-hidden rounded-lg border bg-secondary cursor-pointer hover:opacity-90 transition-opacity"
+                           onClick={() => setSelectedProgressImage(entry.imageUrl)}>
+                        <img
+                          src={entry.imageUrl}
+                          alt="Progress"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
                     <div className="rounded-lg bg-gradient-card p-4">
                       <div className="text-sm text-muted-foreground mb-1">
@@ -551,6 +628,57 @@ const TrainerClientProgressView = () => {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Progress Photo (Optional)</FormLabel>
+                    <FormControl>
+                      <div className="space-y-3">
+                        {imagePreview ? (
+                          <div className="relative aspect-video w-full max-w-md overflow-hidden rounded-lg border bg-secondary">
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
+                              className="h-full w-full object-cover"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={removeImage}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                              <p className="text-sm text-muted-foreground">
+                                Click to upload progress photo
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                PNG, JPG up to 5MB
+                              </p>
+                            </div>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={handleFileChange}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="flex gap-2 justify-end pt-4">
                 <Button
                   type="button"
@@ -559,12 +687,30 @@ const TrainerClientProgressView = () => {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Adding..." : "Add Progress"}
+                <Button type="submit" disabled={isPending || isUploadingImage}>
+                  {isUploadingImage ? "Uploading Image..." : isPending ? "Adding..." : "Add Progress"}
                 </Button>
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Viewer Dialog */}
+      <Dialog open={!!selectedProgressImage} onOpenChange={() => setSelectedProgressImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Progress Photo</DialogTitle>
+          </DialogHeader>
+          {selectedProgressImage && (
+            <div className="aspect-video w-full overflow-hidden rounded-lg bg-secondary">
+              <img
+                src={selectedProgressImage}
+                alt="Progress"
+                className="h-full w-full object-contain"
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

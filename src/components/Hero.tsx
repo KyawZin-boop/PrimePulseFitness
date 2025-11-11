@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Play, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/gym-hero.jpg";
 
 const Hero = () => {
@@ -29,14 +30,18 @@ const Hero = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Button variant="hero" size="xl" className="group">
-              Start Your Journey
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-athletic" />
+            <Button asChild variant="hero" size="xl" className="group">
+              <Link to="/membership">
+                Start Your Journey
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-athletic" />
+              </Link>
             </Button>
             
-            <Button variant="outline_athletic" size="xl" className="group bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white hover:text-primary">
-              <Play className="mr-2 h-5 w-5" />
-              Watch Demo
+            <Button asChild variant="outline_athletic" size="xl" className="group bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white hover:text-primary">
+              <Link to="/classes">
+                <Play className="mr-2 h-5 w-5" />
+                Browse Classes
+              </Link>
             </Button>
           </div>
 
