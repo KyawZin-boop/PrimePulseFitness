@@ -37,7 +37,6 @@ export type CreateMembershipPayload = {
   discountPercentage: number;
   benefits: string[];
   duration: number;
-  activeFlag: boolean;
 };
 
 export type UpdateMembershipPayload = {
@@ -47,7 +46,6 @@ export type UpdateMembershipPayload = {
   discountPercentage: number;
   benefits: string[];
   duration: number;
-  activeFlag: boolean;
 };
 
 export type MembershipResponse = {

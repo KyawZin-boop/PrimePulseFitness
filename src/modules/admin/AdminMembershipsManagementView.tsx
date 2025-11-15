@@ -22,11 +22,14 @@ import { toast } from "sonner";
 import { useState } from "react";
 import api from "@/api";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 
 const AdminMembershipsManagementView = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingMembership, setEditingMembership] = useState<any>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [membershipToDelete, setMembershipToDelete] = useState<
+    { id: string; name: string } | null
+  >(null);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -34,8 +37,7 @@ const AdminMembershipsManagementView = () => {
     price: "",
     discountPercentage: "",
     duration: "30",
-    benefits: "",
-    isActive: true,
+    benefits: ""
   });
 
   const { data: memberships = [], isLoading, refetch } =
@@ -51,8 +53,7 @@ const AdminMembershipsManagementView = () => {
       price: "",
       discountPercentage: "",
       duration: "30",
-      benefits: "",
-      isActive: true,
+      benefits: ""
     });
     setEditingMembership(null);
   };
@@ -75,8 +76,7 @@ const AdminMembershipsManagementView = () => {
       price: parseFloat(formData.price),
       discountPercentage: parseInt(formData.discountPercentage),
       duration: parseInt(formData.duration),
-      benefits: benefitsArray,
-      activeFlag: formData.isActive,
+      benefits: benefitsArray
     };
 
     try {
@@ -107,19 +107,34 @@ const AdminMembershipsManagementView = () => {
       price: membership.price.toString(),
       discountPercentage: membership.discountPercentage.toString(),
       duration: membership.duration.toString(),
-      benefits: membership.benefits.join("\n"),
-      isActive: membership.isActive,
+      benefits: membership.benefits.join("\n")
     });
     setIsCreateDialogOpen(true);
   };
 
-  const handleDelete = async (membershipID: string) => {
-    if (!confirm("Are you sure you want to delete this membership plan?"))
-      return;
+  const handleDeleteRequest = (membership: any) => {
+    setMembershipToDelete({
+      id: membership.membershipID,
+      name: membership.name,
+    });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteDialogClose = (open: boolean) => {
+    setIsDeleteDialogOpen(open);
+    if (!open) {
+      setMembershipToDelete(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!membershipToDelete) return;
 
     try {
-      await deleteMutation?.mutateAsync(membershipID);
+      await deleteMutation?.mutateAsync(membershipToDelete.id);
       toast.success("Membership deleted successfully!");
+      setIsDeleteDialogOpen(false);
+      setMembershipToDelete(null);
       refetch();
     } catch (error) {
       toast.error("Failed to delete membership");
@@ -256,17 +271,6 @@ const AdminMembershipsManagementView = () => {
                 </p>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="isActive"
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, isActive: checked })
-                  }
-                />
-                <Label htmlFor="isActive">Active (visible to users)</Label>
-              </div>
-
               <div className="flex gap-2 justify-end pt-4">
                 <Button
                   type="button"
@@ -352,7 +356,7 @@ const AdminMembershipsManagementView = () => {
                     variant="outline"
                     size="sm"
                     className="text-destructive hover:bg-destructive hover:text-white"
-                    onClick={() => handleDelete(plan.membershipID)}
+                    onClick={() => handleDeleteRequest(plan)}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -374,6 +378,44 @@ const AdminMembershipsManagementView = () => {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Membership Plan</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently remove the
+              membership plan
+              {membershipToDelete?.name ? ` "${membershipToDelete.name}"` : ""}
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this membership plan? Members
+              will no longer have access to its benefits.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleDeleteDialogClose(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteMutation?.isPending}
+              >
+                {deleteMutation?.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Delete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

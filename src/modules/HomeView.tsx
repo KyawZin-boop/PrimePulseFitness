@@ -266,7 +266,7 @@ const HomeView = () => {
             </Card>
 
             <Card className="group py-0 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer border-2 hover:border-accent/50 overflow-hidden">
-              <Link to="/store" className="block">
+              <Link to="/shop" className="block">
                 <div className="bg-gradient-to-br from-accent/20 to-accent/5 p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background/80 group-hover:scale-110 transform transition-transform duration-300">

@@ -53,7 +53,7 @@ const LoginView = () => {
     api.auth.googleLoginMutation.useMutation({
       onSuccess: (data: string) => {
         userLogin(data);
-        navigate(-1);
+        navigate("/");
         toast.success("Login successful!");
       },
 

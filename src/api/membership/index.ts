@@ -75,7 +75,7 @@ export const updateMembership = {
   mutationFn: async (
     payload: UpdateMembershipPayload
   ): Promise<MembershipPlan> => {
-    const response = await axios.put("/Membership/Update", payload);
+    const response = await axios.post("/Membership/UpdateMembership", payload);
     return response.data;
   },
   useMutation: () =>
@@ -87,8 +87,8 @@ export const updateMembership = {
 // Delete a membership plan (Admin)
 export const deleteMembership = {
   mutationFn: async (membershipID: string): Promise<void> => {
-    await axios.delete("/Membership/Delete", {
-      params: { membershipID },
+    await axios.delete("/Membership/DeleteMembership", {
+      params: { id:membershipID },
     });
   },
   useMutation: () =>
