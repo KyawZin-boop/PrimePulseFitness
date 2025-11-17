@@ -15,6 +15,7 @@ import {
   CheckCircle,
   MessageCircle,
   Dumbbell,
+  Utensils,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "@/api";
@@ -348,17 +349,17 @@ const TrainerDashboard = () => {
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => navigate("/trainer/sessions/new")}
+                onClick={() => navigate("/trainer/programs")}
               >
-                <Calendar className="mr-2 h-4 w-4" />
-                Create New Session
+                <Dumbbell className="mr-2 h-4 w-4" />
+                Create Workout Plan
               </Button>
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => navigate("/trainer/diet-plans/new")}
+                onClick={() => navigate("/trainer/diet-plans")}
               >
-                <Dumbbell className="mr-2 h-4 w-4" />
+                <Utensils className="mr-2 h-4 w-4" />
                 Create Diet Plan
               </Button>
               <Button
