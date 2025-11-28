@@ -15,6 +15,7 @@ import ProgressView from "@/modules/progress/ProgressView";
 import StoreView from "@/modules/store/StoreView";
 import CheckoutView from "@/modules/store/CheckoutView";
 import CartView from "@/modules/store/CartView";
+import WishlistView from "@/modules/wishlist/WishlistView";
 import OrderHistory from "@/modules/user/OrderHistory";
 import OrderDetail from "@/modules/user/OrderDetail";
 import DeliveryView from "@/modules/user/DeliveryView";
@@ -110,6 +111,10 @@ const Router = () => {
         {
           path: "shop/cart",
           element: <CartView />,
+        },
+        {
+          path: "wishlist",
+          element: <WishlistView />,
         },
         {
           path: "orders",

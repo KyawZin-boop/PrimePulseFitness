@@ -9,13 +9,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { Menu, X, ShoppingBag, User } from "lucide-react";
+import { Menu, X, ShoppingBag, User, Heart } from "lucide-react";
 import useAuth from "@/hooks/useAuth";
 import { NavLink, useNavigate } from "react-router-dom";
 import { googleLogout } from "@react-oauth/google";
 import { userNavItems } from "@/constants";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/store";
+import NotificationBell from "./NotificationBell";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -62,6 +63,9 @@ const Navigation = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4 justify-end">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/wishlist")} title="Wishlist">
+              <Heart className="h-5 w-5" />
+            </Button>
             <Button variant="ghost" size="icon" className="relative" onClick={handleCartClick}>
               <ShoppingBag className="h-5 w-5" />
               {totalItems > 0 && (
@@ -70,6 +74,8 @@ const Navigation = () => {
                 </span>
               )}
             </Button>
+
+            {isAuthenticated && <NotificationBell />}
 
             {!isAuthenticated ? (
               <NavLink to={"/auth/login"}>
@@ -94,6 +100,9 @@ const Navigation = () => {
                       <DropdownMenuItem onClick={() => navigate("/my-diet")}>My Diet Plan</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/my-workout")}>My Workout Plan</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/progress")}>My Progress</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/wishlist")}>
+                        My Wishlist
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/orders")}>
                         Order History
                       </DropdownMenuItem>
@@ -146,6 +155,16 @@ const Navigation = () => {
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => {
+                    navigate("/wishlist");
+                    setIsOpen(false);
+                  }}
+                >
+                  <Heart className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="relative"
                   onClick={() => {
                     handleCartClick();
@@ -159,6 +178,7 @@ const Navigation = () => {
                     </span>
                   )}
                 </Button>
+                {isAuthenticated && <NotificationBell />}
                 {!isAuthenticated ? (
                   <NavLink to={"/auth/login"} onClick={() => setIsOpen(false)}>
                     <Button variant="hero" size="lg">
@@ -182,6 +202,9 @@ const Navigation = () => {
                           <DropdownMenuItem onClick={() => navigate("/my-diet")}>My Diet Plan</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate("/my-workout")}>My Workout Plan</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate("/progress")}>My Progress</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/wishlist")}>
+                            My Wishlist
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate("/orders")}>
                             Order History
                           </DropdownMenuItem>

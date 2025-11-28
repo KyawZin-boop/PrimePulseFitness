@@ -149,13 +149,14 @@ const AdminDashboard = () => {
                     userMembershipsQuery.isLoading;
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
+    <>
+      <div className="mb-8 sticky top-0 bg-[#FDFDFD] z-10 px-4 py-4">
         <h1 className="text-heading mb-2">Admin Dashboard</h1>
         <p className="text-muted-foreground">
           Platform overview and management center
         </p>
       </div>
+    <div className="container mx-auto py-8 px-4">
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">
@@ -597,6 +598,7 @@ const AdminDashboard = () => {
         </>
       )}
     </div>
+    </>
   );
 };
 

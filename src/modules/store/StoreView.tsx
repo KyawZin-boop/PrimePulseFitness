@@ -13,19 +13,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ShoppingCart, Star } from "lucide-react";
+import { ShoppingCart, Star, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import api from "@/api";
 import useAuth from "@/hooks/useAuth";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
-
+import { addToWishlist, removeFromWishlist, getUserWishlist } from "@/api/wishlist";
 import { addToCart } from "@/store/slices/cartSlice";
 
 const StoreView = () => {
   const dispatch = useDispatch();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userCredentials } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(
@@ -39,6 +39,30 @@ const StoreView = () => {
 
   const { data: products } = api.products.getAllProducts.useQuery();
   const { data: categories } = api.categories.getAllCategories.useQuery();
+  const { data: wishlist, refetch: refetchWishlist } = getUserWishlist.useQuery(
+    userCredentials?.userId || "",
+    { enabled: !!userCredentials?.userId }
+  );
+  
+  const addToWishlistMutation = addToWishlist.useMutation({
+    onSuccess: () => {
+      toast.success("Added to wishlist!");
+      refetchWishlist();
+    },
+    onError: () => {
+      toast.error("Failed to add to wishlist");
+    },
+  });
+
+  const removeFromWishlistMutation = removeFromWishlist.useMutation({
+    onSuccess: () => {
+      toast.success("Removed from wishlist");
+      refetchWishlist();
+    },
+    onError: () => {
+      toast.error("Failed to remove from wishlist");
+    },
+  });
 
   const addToCartParam = searchParams.get("addToCart");
 
@@ -84,6 +108,35 @@ const StoreView = () => {
       })
     );
     toast.success(`${product.name} added to cart!`);
+  };
+
+  const handleToggleWishlist = (e: React.MouseEvent, productId: string) => {
+    e.stopPropagation();
+    
+    if (!isAuthenticated || !userCredentials) {
+      toast.error("Please login to add to wishlist");
+      navigate("/auth/login");
+      return;
+    }
+
+    const isInWishlist = wishlist?.some((item) => item.itemID === productId);
+
+    if (isInWishlist) {
+      removeFromWishlistMutation.mutate({
+        userId: userCredentials.userId,
+        itemId: productId,
+      });
+    } else {
+      addToWishlistMutation.mutate({
+        userID: userCredentials.userId,
+        itemID: productId,
+        type: "product",
+      });
+    }
+  };
+
+  const isInWishlist = (productId: string) => {
+    return wishlist?.some((item) => item.itemID === productId) || false;
   };
 
   return (
@@ -143,6 +196,20 @@ const StoreView = () => {
                     -{product.discount}%
                   </span>
                 )}
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute top-2 left-2 h-8 w-8 rounded-full shadow-lg hover:scale-110 transition"
+                  onClick={(e) => handleToggleWishlist(e, product.productID)}
+                >
+                  <Heart
+                    className={`h-4 w-4 ${
+                      isInWishlist(product.productID)
+                        ? "fill-red-500 text-red-500"
+                        : "text-gray-600"
+                    }`}
+                  />
+                </Button>
               </div>
               <CardHeader className="pb-3">
                 <div className="mb-1 flex items-center justify-between">

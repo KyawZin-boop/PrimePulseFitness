@@ -1,8 +1,21 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 
-export default function useAuth() {
+interface AuthContextType {
+  isAuthenticated: boolean;
+  userCredentials: UserCredentials | null;
+  userLogin: (newToken: string) => void;
+  userLogout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
   const cookieToken = Cookies.get("gym-token") || null;
 
   let initialToken: string | null = cookieToken;
@@ -85,5 +98,20 @@ export default function useAuth() {
     setUserCredentials(null);
   };
 
-  return { isAuthenticated, userCredentials, userLogin, userLogout };
+  const value = {
+    isAuthenticated,
+    userCredentials,
+    userLogin,
+    userLogout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export default function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
 }

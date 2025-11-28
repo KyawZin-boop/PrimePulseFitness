@@ -76,17 +76,19 @@ const AdminLayout = () => {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b">
         <div className="flex items-center justify-between p-4">
           <h1 className="text-xl font-bold text-accent">Admin Panel</h1>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -98,7 +100,7 @@ const AdminLayout = () => {
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="hidden lg:flex h-16 items-center border-b px-6">
+          <div className="hidden lg:flex h-16 items-center justify-between border-b px-6">
             <h1 className="text-xl font-bold text-accent">Admin Panel</h1>
           </div>
 
