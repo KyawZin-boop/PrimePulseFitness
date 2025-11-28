@@ -14,12 +14,10 @@ import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Dumbbell, Loader } from "lucide-react";
 import api from "@/api";
-import useAuth from "@/hooks/useAuth";
 import bgPhoto from "@/assets/bg3.png";
 
 const RegisterView = () => {
   const navigate = useNavigate();
-  const { userLogin } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -56,8 +54,7 @@ const RegisterView = () => {
 
   const { mutate: register, isPending: registerPending } =
     api.auth.registerMutation.useMutation({
-      onSuccess: (data: string) => {
-        userLogin(data);
+      onSuccess: () => {
         navigate("/auth/login");
         toast.success("Registration successful!");
       },
