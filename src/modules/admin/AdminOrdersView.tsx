@@ -85,11 +85,11 @@ const AdminOrdersView = () => {
             {(ordersQuery.data || []).map((order: any) => (
               <div
                 key={order.orderID || order.id}
-                className="flex items-center justify-between rounded-lg border bg-gradient-card p-4"
+                className="flex flex-wrap gap-3 items-center justify-between rounded-lg border bg-gradient-card p-4"
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-semibold">
+                  <div className="flex items-center md:gap-2 mb-2">
+                    <span className="font-semibold text-wrap max-w-52 md:max-w-none">
                       {order.orderID ?? order.id}
                     </span>
                     <span
@@ -100,7 +100,7 @@ const AdminOrdersView = () => {
                       {order.status}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <User className="h-3 w-3" />
                       {order.userID ?? order.customer}

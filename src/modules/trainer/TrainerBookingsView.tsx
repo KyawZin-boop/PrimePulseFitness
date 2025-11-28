@@ -88,9 +88,7 @@ const TrainerBookingsView = () => {
 
       setBookings((prev) =>
         prev.map((booking) =>
-          booking.bookingID === bookingId
-            ? { ...booking, status }
-            : booking
+          booking.bookingID === bookingId ? { ...booking, status } : booking
         )
       );
 
@@ -108,11 +106,17 @@ const TrainerBookingsView = () => {
     }
   };
 
-  const handleApprove = (bookingId: string) => handleStatusChange(bookingId, "approved");
-  const handleReject = (bookingId: string) => handleStatusChange(bookingId, "rejected");
+  const handleApprove = (bookingId: string) =>
+    handleStatusChange(bookingId, "approved");
+  const handleReject = (bookingId: string) =>
+    handleStatusChange(bookingId, "rejected");
 
-  const pendingBookings = bookings.filter((booking) => booking.status === "pending");
-  const processedBookings = bookings.filter((booking) => booking.status !== "pending");
+  const pendingBookings = bookings.filter(
+    (booking) => booking.status === "pending"
+  );
+  const processedBookings = bookings.filter(
+    (booking) => booking.status !== "pending"
+  );
 
   if (!trainerId) {
     return (
@@ -148,7 +152,9 @@ const TrainerBookingsView = () => {
           <Card className="shadow-card">
             <CardContent className="flex flex-col items-center justify-center gap-2 py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Loading pending bookings…</p>
+              <p className="text-sm text-muted-foreground">
+                Loading pending bookings…
+              </p>
             </CardContent>
           </Card>
         ) : bookingsQuery.isError ? (
@@ -162,7 +168,7 @@ const TrainerBookingsView = () => {
             {pendingBookings.map((booking) => (
               <Card key={booking.bookingID} className="shadow-card">
                 <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex flex-1 items-start gap-3">
                       <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
                         <div className="flex h-full w-full items-center justify-center">
@@ -220,21 +226,31 @@ const TrainerBookingsView = () => {
                 <CardContent>
                   <div className="mb-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <div className="rounded-lg bg-secondary/50 p-3">
-                      <div className="mb-1 text-xs text-muted-foreground">Schedule</div>
+                      <div className="mb-1 text-xs text-muted-foreground">
+                        Schedule
+                      </div>
                       <div className="font-semibold">{booking.time}</div>
                     </div>
                     <div className="rounded-lg bg-secondary/50 p-3">
-                      <div className="mb-1 text-xs text-muted-foreground">Duration</div>
-                      <div className="font-semibold">{booking.duration} minutes</div>
+                      <div className="mb-1 text-xs text-muted-foreground">
+                        Duration
+                      </div>
+                      <div className="font-semibold">
+                        {booking.duration} minutes
+                      </div>
                     </div>
                     <div className="rounded-lg bg-secondary/50 p-3">
-                      <div className="mb-1 text-xs text-muted-foreground">Capacity</div>
+                      <div className="mb-1 text-xs text-muted-foreground">
+                        Capacity
+                      </div>
                       <div className="font-semibold">
                         {booking.assignedCount}/{booking.capacity} assigned
                       </div>
                     </div>
                     <div className="rounded-lg bg-secondary/50 p-3">
-                      <div className="mb-1 text-xs text-muted-foreground">Client details</div>
+                      <div className="mb-1 text-xs text-muted-foreground">
+                        Client details
+                      </div>
                       <div className="font-semibold">
                         {formatClientDetails(booking.age, booking.gender)}
                       </div>

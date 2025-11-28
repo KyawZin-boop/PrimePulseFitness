@@ -7,7 +7,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, ImagePlus, Loader2, MessageCircle, RefreshCw, Send, User, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  ImagePlus,
+  Loader2,
+  MessageCircle,
+  RefreshCw,
+  Send,
+  User,
+  XCircle,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import useAuth from "@/hooks/useAuth";
@@ -29,7 +38,10 @@ const STATUS_LABEL: Record<NonNullable<ChatMessage["status"]>, string> = {
   error: "Failed",
 };
 
-const connectionMeta: Record<ChatConnectionState, { label: string; className: string }> = {
+const connectionMeta: Record<
+  ChatConnectionState,
+  { label: string; className: string }
+> = {
   idle: { label: "Idle", className: "bg-muted text-muted-foreground" },
   connecting: { label: "Connecting", className: "bg-amber-100 text-amber-700" },
   open: { label: "Connected", className: "bg-emerald-100 text-emerald-700" },
@@ -101,10 +113,7 @@ const filterClients = (clients: Client[] | undefined, term: string) => {
 
 const TrainerMessagesView = () => {
   const { userCredentials: currentUser } = useAuth();
-  const currentUserId = useMemo(
-    () => currentUser?.userId ?? "",
-    [currentUser]
-  );
+  const currentUserId = useMemo(() => currentUser?.userId ?? "", [currentUser]);
 
   // TODO: Replace with actual trainer clients endpoint
   // For now, using empty array - backend needs to provide api.trainer.getMyClients()
@@ -116,7 +125,9 @@ const TrainerMessagesView = () => {
   const clientIdFromQuery = searchParams.get("client");
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeClientId, setActiveClientId] = useState<string | null>(clientIdFromQuery);
+  const [activeClientId, setActiveClientId] = useState<string | null>(
+    clientIdFromQuery
+  );
   const [draft, setDraft] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState<string>("");
 
@@ -132,12 +143,15 @@ const TrainerMessagesView = () => {
     }
   }, [response]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (!clients?.length) {
       return;
     }
 
-    if (clientIdFromQuery && clients.some((client) => client.userID === clientIdFromQuery)) {
+    if (
+      clientIdFromQuery &&
+      clients.some((client) => client.userID === clientIdFromQuery)
+    ) {
       setActiveClientId(clientIdFromQuery);
       return;
     }
@@ -168,18 +182,28 @@ const TrainerMessagesView = () => {
     [clients, searchTerm]
   );
 
-  const activeClient = clients?.find((client) => client.userID === activeClientId) ?? null;
+  const activeClient =
+    clients?.find((client) => client.userID === activeClientId) ?? null;
 
   const chatIdentity = currentUser
-    ? { id: currentUser.userId, name: currentUser.name, email: currentUser.email }
+    ? {
+        id: currentUser.userId,
+        name: currentUser.name,
+        email: currentUser.email,
+      }
     : null;
   const peerIdentity = activeClient
-    ? { id: activeClient.userID, name: activeClient.name, email: activeClient.email }
+    ? {
+        id: activeClient.userID,
+        name: activeClient.name,
+        email: activeClient.email,
+      }
     : null;
 
-  const conversationId = chatIdentity && peerIdentity
-    ? buildConversationId(chatIdentity.id, peerIdentity.id)
-    : undefined;
+  const conversationId =
+    chatIdentity && peerIdentity
+      ? buildConversationId(chatIdentity.id, peerIdentity.id)
+      : undefined;
 
   const loadHistory = useCallback(async () => {
     if (!conversationId || !chatIdentity?.id || !peerIdentity?.id) {
@@ -193,8 +217,13 @@ const TrainerMessagesView = () => {
       });
 
       return history
-        .map((item) => api.chat.mapHistoryItemToChatMessage(item, buildConversationId))
-        .filter((item): item is ChatMessage => !!item && item.conversationId === conversationId);
+        .map((item) =>
+          api.chat.mapHistoryItemToChatMessage(item, buildConversationId)
+        )
+        .filter(
+          (item): item is ChatMessage =>
+            !!item && item.conversationId === conversationId
+        );
     } catch (error) {
       console.error("Failed to fetch chat history", error);
       throw error;
@@ -230,25 +259,23 @@ const TrainerMessagesView = () => {
     setAttachmentUrl("");
   }, [conversationId]);
 
-  const {
-    mutate: uploadAttachment,
-    isPending: isUploadingAttachment,
-  } = api.files.uploadFile.useMutation({
-    onMutate: () => {
-      setAttachmentUrl("");
-    },
-    onSuccess: (url) => {
-      setAttachmentUrl(url);
-      toast.success("Image attached");
-    },
-    onError: (error) => {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to upload image. Please try again.";
-      toast.error(message);
-    },
-  });
+  const { mutate: uploadAttachment, isPending: isUploadingAttachment } =
+    api.files.uploadFile.useMutation({
+      onMutate: () => {
+        setAttachmentUrl("");
+      },
+      onSuccess: (url) => {
+        setAttachmentUrl(url);
+        toast.success("Image attached");
+      },
+      onError: (error) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to upload image. Please try again.";
+        toast.error(message);
+      },
+    });
 
   const canSubmit =
     hasChatTarget &&
@@ -337,8 +364,7 @@ const TrainerMessagesView = () => {
   };
 
   return (
-    <div className="container flex justify-center items-center py-8 px-4 h-screen">
-
+    <div className="container flex justify-center items-center px-4 mb-3 lg:mb-0 h-full">
       <div className="grid gap-6 lg:grid-cols-[350px_1fr] flex-1">
         {/* Clients List */}
         <Card className="shadow-card">
@@ -359,7 +385,10 @@ const TrainerMessagesView = () => {
             {isLoadingClients && (
               <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="flex items-center gap-3 rounded-md border p-3">
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 rounded-md border p-3"
+                  >
                     <Skeleton className="h-10 w-10 rounded-full" />
                     <div className="flex-1 space-y-2">
                       <Skeleton className="h-3 w-1/2" />
@@ -369,14 +398,18 @@ const TrainerMessagesView = () => {
                 ))}
               </div>
             )}
-            
-            {!isLoadingClients && !isClientsError && filteredClients.length === 0 && (
-              <p className="text-center text-sm text-muted-foreground">
-                No clients match that search.
-              </p>
-            )}
 
-             {!isLoadingClients && !isClientsError && filteredClients.length > 0 && (
+            {!isLoadingClients &&
+              !isClientsError &&
+              filteredClients.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground">
+                  No clients match that search.
+                </p>
+              )}
+
+            {!isLoadingClients &&
+              !isClientsError &&
+              filteredClients.length > 0 &&
               filteredClients.map((conv) => (
                 <div
                   key={conv.userID}
@@ -401,8 +434,7 @@ const TrainerMessagesView = () => {
                     </div>
                   </div>
                 </div>
-              ))
-            )}
+              ))}
           </CardContent>
         </Card>
 
@@ -419,21 +451,21 @@ const TrainerMessagesView = () => {
                     <CardTitle>{peerIdentity.name}</CardTitle>
                     <CardDescription className="capitalize">
                       <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "border-transparent",
-                      connectionMeta[connectionState].className
-                    )}
-                  >
-                    {connectionMeta[connectionState].label}
-                  </Badge>
-                  {lastError && (
-                    <span className="flex items-center gap-1 text-xs text-destructive">
-                      <AlertCircle className="size-3" /> {lastError}
-                    </span>
-                  )}
-                </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "border-transparent",
+                            connectionMeta[connectionState].className
+                          )}
+                        >
+                          {connectionMeta[connectionState].label}
+                        </Badge>
+                        {lastError && (
+                          <span className="flex items-center gap-1 text-xs text-destructive">
+                            <AlertCircle className="size-3" /> {lastError}
+                          </span>
+                        )}
+                      </div>
                     </CardDescription>
                   </div>
                   <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
@@ -461,29 +493,34 @@ const TrainerMessagesView = () => {
                 <div className="h-96 space-y-4 overflow-y-auto p-4">
                   {isLoadingInitial && (
                     <div className="flex flex-1 items-center justify-center text-muted-foreground">
-                      <Loader2 className="mr-2 size-5 animate-spin" /> Preparing chat...
+                      <Loader2 className="mr-2 size-5 animate-spin" /> Preparing
+                      chat...
                     </div>
                   )}
 
                   {!isLoadingInitial && !hasChatTarget && (
                     <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
                       <MessageCircle className="size-12" />
-                      <p className="text-sm">Select a designer to start chatting.</p>
+                      <p className="text-sm">
+                        Select a designer to start chatting.
+                      </p>
                     </div>
                   )}
 
                   {!isLoadingInitial && hasChatTarget && (
                     <>
-                    {messages.length === 0 && historyLoaded && (
-                      <div className="text-muted-foreground text-sm">
-                        No messages yet. Say hello to get things started!
-                      </div>
-                    )}
+                      {messages.length === 0 && historyLoaded && (
+                        <div className="text-muted-foreground text-sm">
+                          No messages yet. Say hello to get things started!
+                        </div>
+                      )}
                     </>
                   )}
 
                   {messages.map((message) => {
-                    const status = message.status ? STATUS_LABEL[message.status] : undefined;
+                    const status = message.status
+                      ? STATUS_LABEL[message.status]
+                      : undefined;
                     const isOwnMessage = message.senderId === currentUserId;
                     return (
                       <div
@@ -495,9 +532,13 @@ const TrainerMessagesView = () => {
                       >
                         {!isOwnMessage && (
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={peerIdentity?.name} alt={peerIdentity?.name} />
+                            <AvatarImage
+                              src={peerIdentity?.name}
+                              alt={peerIdentity?.name}
+                            />
                             <AvatarFallback>
-                              {peerIdentity?.name?.charAt(0)?.toUpperCase() || "T"}
+                              {peerIdentity?.name?.charAt(0)?.toUpperCase() ||
+                                "T"}
                             </AvatarFallback>
                           </Avatar>
                         )}
@@ -538,9 +579,13 @@ const TrainerMessagesView = () => {
                         </div>
                         {isOwnMessage && (
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={chatIdentity?.name} alt={chatIdentity?.name} />
+                            <AvatarImage
+                              src={chatIdentity?.name}
+                              alt={chatIdentity?.name}
+                            />
                             <AvatarFallback>
-                              {chatIdentity?.name?.charAt(0)?.toUpperCase() || "U"}
+                              {chatIdentity?.name?.charAt(0)?.toUpperCase() ||
+                                "U"}
                             </AvatarFallback>
                           </Avatar>
                         )}
@@ -551,7 +596,10 @@ const TrainerMessagesView = () => {
                 </div>
 
                 {/* Message Input */}
-                <form onSubmit={handleSend} className="border-t bg-card px-6 pt-4">
+                <form
+                  onSubmit={handleSend}
+                  className="border-t bg-card px-6 pt-4"
+                >
                   <div className="flex flex-col gap-3">
                     {attachmentUrl ? (
                       <div className="flex items-center gap-3 rounded-md border p-2">
@@ -574,7 +622,7 @@ const TrainerMessagesView = () => {
                     <div className="flex items-end gap-2">
                       <Textarea
                         placeholder="Type your message..."
-                        value={draft} 
+                        value={draft}
                         onChange={(event) => setDraft(event.target.value)}
                         onKeyDown={handleKeyDown}
                         disabled={!hasChatTarget}

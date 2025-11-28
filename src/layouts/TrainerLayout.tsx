@@ -181,7 +181,7 @@ const TrainerLayout = () => {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 overflow-x-hidden">
+      <main className="flex-1 overflow-x-hidden mt-16 lg:mt-0">
         <Outlet />
       </main>
     </div>
