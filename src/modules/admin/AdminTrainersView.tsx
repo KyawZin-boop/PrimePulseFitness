@@ -3,7 +3,7 @@ import type { ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Search, Star, UploadCloud } from "lucide-react";
+import { Loader2, Plus, Search, Star, UploadCloud, Mail, KeyRound, User, Copy, CheckCircle2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
@@ -61,6 +61,11 @@ const ALLOWED_PROFILE_PHOTO_TYPES = ["image/jpeg", "image/png", "image/jpg"] as 
 const AdminTrainersView = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [createdTrainerPassword, setCreatedTrainerPassword] = useState<string | null>(null);
+  const [createdTrainerEmail, setCreatedTrainerEmail] = useState<string | null>(null);
+  const [createdTrainerName, setCreatedTrainerName] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
   const [formState, setFormState] = useState<CreateTrainerFormState>(emptyTrainerFormState);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -82,7 +87,14 @@ const AdminTrainersView = () => {
   });
 
   const createTrainerMutation = addNewTrainer.useMutation({
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      // Expect password in response: data.password
+      if (data.data) {
+        setCreatedTrainerPassword(data.data);
+        setCreatedTrainerEmail(formState.email);
+        setCreatedTrainerName(formState.name);
+        setShowPasswordDialog(true);
+      }
       toast.success("Trainer created successfully");
       queryClient.invalidateQueries({ queryKey: ["getAllTrainers"] });
       setIsCreateDialogOpen(false);
@@ -213,6 +225,85 @@ const AdminTrainersView = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
+      {/* Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/20 mx-auto mb-4">
+              <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+            </div>
+            <DialogTitle className="text-center text-xl">Trainer Account Created</DialogTitle>
+            <DialogDescription className="text-center">
+              The trainer account has been created successfully. Share these credentials with the trainer.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Trainer Name */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+              <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">Trainer Name</p>
+                <p className="text-base font-semibold">{createdTrainerName}</p>
+              </div>
+            </div>
+
+            {/* Trainer Email */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+              <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">Email</p>
+                <p className="text-base font-semibold break-all">{createdTrainerEmail}</p>
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900">
+              <KeyRound className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-400">Password</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-lg font-mono font-bold text-amber-950 dark:text-amber-300">{createdTrainerPassword}</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdTrainerPassword || "");
+                      setIsCopied(true);
+                      toast.success("Password copied to clipboard");
+                      setTimeout(() => setIsCopied(false), 2000);
+                    }}
+                  >
+                    {isCopied ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 text-xs text-muted-foreground p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-900">
+              <span>ℹ️</span>
+              <p>The trainer can use their email and this password to log in. Make sure to share these credentials securely.</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              className="w-full" 
+              onClick={() => {
+                setShowPasswordDialog(false);
+                setIsCopied(false);
+              }}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-heading mb-2">Trainer Management</h1>
