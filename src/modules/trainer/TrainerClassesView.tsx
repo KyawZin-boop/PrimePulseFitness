@@ -7,11 +7,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import useAuth from "@/hooks/useAuth";
-import { Users, Calendar, BookOpen, Video, Upload, Trash2, X } from "lucide-react";
+import {
+  Users,
+  Calendar,
+  BookOpen,
+  Video,
+  Upload,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
@@ -31,9 +45,10 @@ const TrainerClassesView = () => {
   });
   const trainerId = trainer?.trainerID ?? "";
 
-  const { data: myClasses, refetch } = api.classes.getClassesByTrainerId.useQuery(trainerId, {
-    enabled: Boolean(trainerId),
-  });
+  const { data: myClasses, refetch } =
+    api.classes.getClassesByTrainerId.useQuery(trainerId, {
+      enabled: Boolean(trainerId),
+    });
 
   const uploadFileMutation = api.files.uploadFile.useMutation();
   const addTutorialMutation = api.tutorial.AddTutorial.useMutation({
@@ -87,7 +102,7 @@ const TrainerClassesView = () => {
     try {
       // First upload the video file
       const videoUrl = await uploadFileMutation.mutateAsync(file);
-      
+
       // Then add tutorial with the video URL
       if (selectedClass && trainerId) {
         await addTutorialMutation.mutateAsync({
@@ -121,7 +136,7 @@ const TrainerClassesView = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-wrap gap-3 items-center justify-between">
         <div>
           <h1 className="text-heading mb-2">My Classes</h1>
           <p className="text-muted-foreground">
@@ -134,74 +149,83 @@ const TrainerClassesView = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {myClasses && myClasses.map((gymClass) => (
-          <Card
-            key={gymClass.classID}
-            className="cursor-pointer shadow-card transition hover:shadow-athletic"
-            onClick={() => navigate(`/trainer/classes/${gymClass.classID}/roster`)}
-          >
-            <CardHeader>
-              <CardTitle>{gymClass.className}</CardTitle>
-              <CardDescription className="line-clamp-2">
-                {gymClass.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    Students
-                  </span>
-                  <span className="font-medium">
-                    {gymClass.assignedCount}/{gymClass.capacity}
-                  </span>
+        {myClasses &&
+          myClasses.map((gymClass) => (
+            <Card
+              key={gymClass.classID}
+              className="cursor-pointer shadow-card transition hover:shadow-athletic"
+              onClick={() =>
+                navigate(`/trainer/classes/${gymClass.classID}/roster`)
+              }
+            >
+              <CardHeader>
+                <CardTitle>{gymClass.className}</CardTitle>
+                <CardDescription className="line-clamp-2">
+                  {gymClass.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      Students
+                    </span>
+                    <span className="font-medium">
+                      {gymClass.assignedCount}/{gymClass.capacity}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      Schedule
+                    </span>
+                    <span className="font-medium text-xs">{gymClass.time}</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    Schedule
-                  </span>
-                  <span className="font-medium text-xs">
-                    {gymClass.time}
-                  </span>
+
+                <div className="pt-2 border-t">
+                  <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className="h-full bg-accent transition-all"
+                      style={{
+                        width: `${
+                          (gymClass.assignedCount / gymClass.capacity) * 100
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground text-center">
+                    {Math.round(
+                      (gymClass.assignedCount / gymClass.capacity) * 100
+                    )}
+                    % full
+                  </p>
                 </div>
-              </div>
 
-              <div className="pt-2 border-t">
-                <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                  <div
-                    className="h-full bg-accent transition-all"
-                    style={{
-                      width: `${(gymClass.assignedCount / gymClass.capacity) * 100}%`,
-                    }}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground text-center">
-                  {Math.round((gymClass.assignedCount / gymClass.capacity) * 100)}%
-                  full
-                </p>
-              </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/trainer/classes/${gymClass.classID}/roster`);
+                  }}
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  View Roster
+                </Button>
 
-              <Button variant="outline" className="w-full" onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/trainer/classes/${gymClass.classID}/roster`);
-              }}>
-                <BookOpen className="mr-2 h-4 w-4" />
-                View Roster
-              </Button>
-
-              <Button 
-                variant={gymClass.videoUrl ? "secondary" : "outline"}
-                className="w-full" 
-                onClick={(e) => handleVideoManage(gymClass, e)}
-              >
-                <Video className="mr-2 h-4 w-4" />
-                {gymClass.videoUrl ? "Manage Tutorial" : "Add Tutorial"}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+                <Button
+                  variant={gymClass.videoUrl ? "secondary" : "outline"}
+                  className="w-full"
+                  onClick={(e) => handleVideoManage(gymClass, e)}
+                >
+                  <Video className="mr-2 h-4 w-4" />
+                  {gymClass.videoUrl ? "Manage Tutorial" : "Add Tutorial"}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
       </div>
 
       {myClasses?.length === 0 && (
@@ -223,7 +247,9 @@ const TrainerClassesView = () => {
       <Dialog open={showVideoDialog} onOpenChange={setShowVideoDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Tutorial Video - {selectedClass?.className}</DialogTitle>
+            <DialogTitle>
+              Tutorial Video - {selectedClass?.className}
+            </DialogTitle>
             <DialogDescription>
               Upload or manage the tutorial video for this class
             </DialogDescription>
@@ -247,7 +273,11 @@ const TrainerClassesView = () => {
                     variant="outline"
                     className="flex-1"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingVideo || addTutorialMutation.isPending || deleteTutorialMutation.isPending}
+                    disabled={
+                      uploadingVideo ||
+                      addTutorialMutation.isPending ||
+                      deleteTutorialMutation.isPending
+                    }
                   >
                     <Upload className="mr-2 h-4 w-4" />
                     Replace Video
@@ -255,7 +285,11 @@ const TrainerClassesView = () => {
                   <Button
                     variant="destructive"
                     onClick={handleVideoDelete}
-                    disabled={uploadingVideo || addTutorialMutation.isPending || deleteTutorialMutation.isPending}
+                    disabled={
+                      uploadingVideo ||
+                      addTutorialMutation.isPending ||
+                      deleteTutorialMutation.isPending
+                    }
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete

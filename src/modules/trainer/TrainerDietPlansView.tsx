@@ -13,7 +13,13 @@ import api from "@/api";
 import useAuth from "@/hooks/useAuth";
 import { CreatePlanDialog } from "@/components/dialogs/PlanDialog";
 import { AssignPlanDialog } from "@/components/dialogs/AssignPlanDialog";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const TrainerDietPlansView = () => {
   const { userCredentials } = useAuth();
@@ -28,7 +34,8 @@ const TrainerDietPlansView = () => {
     enabled: Boolean(trainerId),
   });
   const dietPlans = plansQuery.data ?? [];
-  const showEmptyState = Boolean(trainerId) && !plansQuery.isLoading && dietPlans.length === 0;
+  const showEmptyState =
+    Boolean(trainerId) && !plansQuery.isLoading && dietPlans.length === 0;
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
   const [clickDelete, setClickDelete] = useState(false);
 
@@ -59,7 +66,7 @@ const TrainerDietPlansView = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-wrap gap-3 items-center justify-between">
         <div>
           <h1 className="text-heading mb-2">Diet Plans</h1>
           <p className="text-muted-foreground">
@@ -94,9 +101,13 @@ const TrainerDietPlansView = () => {
                   size="sm"
                   variant="ghost"
                   onClick={() => handleDeletePlan(plan.planID)}
-                  disabled={deletePlanMutation.isPending && deletingPlanId === plan.planID}
+                  disabled={
+                    deletePlanMutation.isPending &&
+                    deletingPlanId === plan.planID
+                  }
                 >
-                  {deletePlanMutation.isPending && deletingPlanId === plan.planID ? (
+                  {deletePlanMutation.isPending &&
+                  deletingPlanId === plan.planID ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -111,7 +122,9 @@ const TrainerDietPlansView = () => {
                 <div className="text-sm font-semibold mb-2">Daily Targets</div>
                 <div className="grid grid-cols-4 gap-2 text-center">
                   <div>
-                    <div className="text-xs text-muted-foreground">Calories</div>
+                    <div className="text-xs text-muted-foreground">
+                      Calories
+                    </div>
                     <div className="font-bold text-accent">
                       {plan.dailyCalories}
                     </div>
@@ -165,7 +178,10 @@ const TrainerDietPlansView = () => {
                       variant="outline"
                       className="flex-1"
                       size="sm"
-                      disabled={deletePlanMutation.isPending && deletingPlanId === plan.planID}
+                      disabled={
+                        deletePlanMutation.isPending &&
+                        deletingPlanId === plan.planID
+                      }
                     >
                       Edit Plan
                     </Button>
@@ -174,7 +190,8 @@ const TrainerDietPlansView = () => {
                 <AssignPlanDialog
                   plan={plan}
                   disabled={
-                    deletePlanMutation.isPending && deletingPlanId === plan.planID
+                    deletePlanMutation.isPending &&
+                    deletingPlanId === plan.planID
                   }
                 />
               </div>
