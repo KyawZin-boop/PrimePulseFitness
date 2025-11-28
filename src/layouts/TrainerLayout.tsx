@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import useAuth from "@/hooks/useAuth";
+import NotificationBell from "@/components/NotificationBell";
 
 const TrainerLayout = () => {
   const navigate = useNavigate();
@@ -125,10 +126,13 @@ const TrainerLayout = () => {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="border-b p-6">
-            <h1 className="flex items-center gap-2 text-xl font-bold text-accent">
-              <Dumbbell className="h-6 w-6" />
-              PrimePulse Trainer
-            </h1>
+            <div className="flex items-center justify-between">
+              <h1 className="flex items-center gap-2 text-xl font-bold text-accent">
+                <Dumbbell className="h-6 w-6" />
+                PrimePulse Trainer
+              </h1>
+              <NotificationBell />
+            </div>
           </div>
 
           {/* Navigation */}
